@@ -34,6 +34,27 @@ builder.Host.UseSerilog();
 
 // Add Database context with PostgreSQL provider and snake_case naming conventions
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Fallback to Railway's DATABASE_URL if DefaultConnection is not set
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrWhiteSpace(databaseUrl))
+    {
+        // Parse postgresql://user:password@host:port/database format
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo?.Split(':');
+        var username = userInfo?.Length > 0 ? userInfo[0] : "postgres";
+        var password = userInfo?.Length > 1 ? userInfo[1] : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+
+        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        Log.Information("Using DATABASE_URL for PostgreSQL connection: {Host}:{Port}/{Database}", host, port, database);
+    }
+}
+
 builder.Services.AddDbContext<DeskGuardDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>

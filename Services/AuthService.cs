@@ -103,7 +103,7 @@ namespace DeskGuardBackend.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "AuthService::LoginAsync failed for email: {Email}", request.Email);
-                throw new UnauthorizedActionException("An unexpected error occurred during login. Please try again.", 500);
+                throw new UnauthorizedActionException($"Login error: {ex.Message} | Inner: {ex.InnerException?.Message ?? "none"} | Type: {ex.GetType().Name}", 500);
             }
         }
 

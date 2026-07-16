@@ -317,5 +317,38 @@ namespace DeskGuardBackend.Services
         {
             return await _dbContext.Machines.CountAsync(m => m.CompanyId == companyId && !m.IsOnline);
         }
+
+        public async Task UninstallMachineAsync(string machineUid, string? reason = null)
+        {
+            try
+            {
+                var machine = await _dbContext.Machines
+                    .Include(m => m.Company)
+                    .FirstOrDefaultAsync(m => m.MachineUid == machineUid);
+
+                if (machine == null)
+                {
+                    _logger.LogWarning("UninstallMachineAsync - Machine not found: {MachineUid}", machineUid);
+                    return;
+                }
+
+                machine.IsActive = false;
+                machine.IsOnline = false;
+                machine.UpdatedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync();
+
+                await _auditLogService.LogAsync(
+                    EventType.Delete.ToString(),
+                    $"Machine uninstalled: {machine.MachineUid} | {machine.Hostname} | Reason: {reason ?? "Not provided"}",
+                    machine: machine
+                );
+
+                _logger.LogInformation("Machine uninstalled: {MachineUid} | {Hostname}", machineUid, machine.Hostname);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "MachineService::UninstallMachineAsync failed for: {MachineUid}", machineUid);
+            }
+        }
     }
 }

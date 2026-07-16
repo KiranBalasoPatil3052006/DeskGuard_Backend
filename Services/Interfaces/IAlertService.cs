@@ -14,5 +14,7 @@ namespace DeskGuardBackend.Services.Interfaces
         Task<IEnumerable<Alert>> GetCriticalAlertsAsync(long companyId);
         Task<IEnumerable<AlertRule>> GetAlertRulesAsync(long companyId);
         Task<AlertRule> UpdateAlertRuleAsync(long ruleId, IDictionary<string, object> data);
+        Task CreateMachineOfflineAlertAsync(Machine machine);
+        Task CreateMachineUninstalledAlertAsync(Machine machine, string? reason);
     }
 }

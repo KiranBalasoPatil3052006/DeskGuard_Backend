@@ -131,6 +131,89 @@ namespace DeskGuardBackend.Services
             }
         }
 
+        public async Task CreateMachineOfflineAlertAsync(Machine machine)
+        {
+            try
+            {
+                var existingOffline = await _dbContext.Alerts
+                    .AnyAsync(a => a.MachineId == machine.Id
+                        && a.Title.Contains("went offline")
+                        && a.Status == "open");
+
+                if (existingOffline) return;
+
+                var alert = new Alert
+                {
+                    CompanyId = machine.CompanyId ?? 0,
+                    MachineId = machine.Id,
+                    Severity = "warning",
+                    Title = $"Agent went offline: {machine.Hostname ?? machine.MachineUid}",
+                    Description = $"The DeskGuard agent on {machine.Hostname ?? machine.MachineUid} has not reported for more than 5 minutes. Possible causes: agent stopped, network issue, or service disabled.",
+                    Status = AlertStatus.Open.ToString().ToLowerInvariant(),
+                    Metadata = JsonSerializer.Serialize(new Dictionary<string, string>
+                    {
+                        { "metric", "agent_offline" },
+                        { "machine_uid", machine.MachineUid }
+                    })
+                };
+
+                await _dbContext.Alerts.AddAsync(alert);
+                await _dbContext.SaveChangesAsync();
+
+                await _notificationService.SendAlertNotificationAsync(alert);
+                await _auditLogService.LogAsync(
+                    EventType.Alert.ToString(),
+                    alert.Title,
+                    machine: machine
+                );
+
+                _logger.LogInformation("Offline alert created for machine: {MachineUid}", machine.MachineUid);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create offline alert for machine: {MachineId}", machine.Id);
+            }
+        }
+
+        public async Task CreateMachineUninstalledAlertAsync(Machine machine, string? reason)
+        {
+            try
+            {
+                var alert = new Alert
+                {
+                    CompanyId = machine.CompanyId ?? 0,
+                    MachineId = machine.Id,
+                    Severity = "high",
+                    Title = $"Agent uninstalled: {machine.Hostname ?? machine.MachineUid}",
+                    Description = $"The DeskGuard agent was uninstalled from {machine.Hostname ?? machine.MachineUid}. Reason: {reason ?? "Not provided by user"}. If this was unauthorized, please investigate.",
+                    Status = AlertStatus.Open.ToString().ToLowerInvariant(),
+                    Metadata = JsonSerializer.Serialize(new Dictionary<string, string>
+                    {
+                        { "metric", "agent_uninstalled" },
+                        { "machine_uid", machine.MachineUid },
+                        { "reason", reason ?? "" }
+                    })
+                };
+
+                await _dbContext.Alerts.AddAsync(alert);
+                await _dbContext.SaveChangesAsync();
+
+                await _notificationService.SendAlertNotificationAsync(alert);
+                await _notificationService.SendEmailNotificationAsync(alert);
+                await _auditLogService.LogAsync(
+                    EventType.Alert.ToString(),
+                    alert.Title,
+                    machine: machine
+                );
+
+                _logger.LogInformation("Uninstall alert created for machine: {MachineUid}", machine.MachineUid);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create uninstall alert for machine: {MachineId}", machine.Id);
+            }
+        }
+
         private static Alert CreateAlert(Machine machine, string severity, string title, string description, string metric)
         {
             var metadata = new Dictionary<string, string>

@@ -41,8 +41,9 @@ namespace DeskGuardBackend.Middleware
                                        path.StartsWith("/api/v1/agent/telemetry", StringComparison.OrdinalIgnoreCase) ||
                                        path.StartsWith("/api/v1/agent/device-sync", StringComparison.OrdinalIgnoreCase) ||
                                        path.StartsWith("/api/v1/agent/device-events", StringComparison.OrdinalIgnoreCase) ||
-                                        path.StartsWith("/api/v1/agent/changes", StringComparison.OrdinalIgnoreCase) ||
-                                        path.StartsWith("/api/v1/inventory/", StringComparison.OrdinalIgnoreCase);
+                                         path.StartsWith("/api/v1/agent/changes", StringComparison.OrdinalIgnoreCase) ||
+                                         path.StartsWith("/api/v1/agent/shutdown", StringComparison.OrdinalIgnoreCase) ||
+                                         path.StartsWith("/api/v1/inventory/", StringComparison.OrdinalIgnoreCase);
 
             if (!requiresMachineAuth)
             {

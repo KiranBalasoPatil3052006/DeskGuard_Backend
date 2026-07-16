@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using DeskGuardBackend.Services.Interfaces;
@@ -11,6 +13,7 @@ namespace DeskGuardBackend.BackgroundJobs
     /// <summary>
     /// Background service that runs periodically (every 60 seconds) to identify
     /// and mark offline machines if their heartbeat has expired.
+    /// Also generates alerts when machines go offline.
     /// Acts as a built-in replacement for the Laravel scheduler.
     /// </summary>
     public class OfflineCheckJob : BackgroundService
@@ -39,10 +42,26 @@ namespace DeskGuardBackend.BackgroundJobs
                         using (var scope = _serviceProvider.CreateScope())
                         {
                             var machineService = scope.ServiceProvider.GetRequiredService<IMachineService>();
-                            var offlineCount = await machineService.MarkOfflineMachinesAsync();
-                            if (offlineCount > 0)
+                            var alertService = scope.ServiceProvider.GetRequiredService<IAlertService>();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<DeskGuardBackend.Data.DeskGuardDbContext>();
+
+                            // Mark offline machines and get list of those newly marked
+                            var newlyOffline = await machineService.MarkOfflineMachinesAsync();
+
+                            if (newlyOffline > 0)
                             {
-                                _logger.LogInformation("OfflineCheckJob updated: {Count} machines marked offline.", offlineCount);
+                                _logger.LogInformation("OfflineCheckJob updated: {Count} machines marked offline.", newlyOffline);
+
+                                // Create alerts for newly offline machines
+                                var threshold = DateTime.UtcNow.AddMinutes(-5);
+                                var offlineMachines = await dbContext.Machines
+                                    .Where(m => !m.IsOnline && m.LastHeartbeatAt != null && m.LastHeartbeatAt < threshold)
+                                    .ToListAsync();
+
+                                foreach (var machine in offlineMachines)
+                                {
+                                    await alertService.CreateMachineOfflineAlertAsync(machine);
+                                }
                             }
                         }
                     }

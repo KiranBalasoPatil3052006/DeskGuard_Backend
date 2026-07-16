@@ -17,6 +17,7 @@ namespace DeskGuardBackend.Services.Interfaces
         Task<int> MarkOfflineMachinesAsync();
         Task<int> GetOnlineCountAsync(long companyId);
         Task<int> GetOfflineCountAsync(long companyId);
+        Task UninstallMachineAsync(string machineUid, string? reason = null);
     }
 
     public class PaginatedResponseDto<T>

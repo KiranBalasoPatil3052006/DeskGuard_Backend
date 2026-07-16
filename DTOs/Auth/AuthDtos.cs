@@ -50,7 +50,19 @@ namespace DeskGuardBackend.DTOs.Auth
         public UserDto User { get; set; } = null!;
     }
 
-    public class OtpRequest
+    public class RegisterRequest
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("password")]
+    public string Password { get; set; } = string.Empty;
+}
+
+public class OtpRequest
     {
         [JsonPropertyName("mobile_number")]
         public string MobileNumber { get; set; } = string.Empty;

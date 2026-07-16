@@ -23,6 +23,26 @@ namespace DeskGuardBackend.Controllers
             _logger = logger;
         }
 
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                var response = await _authService.RegisterAsync(request);
+                return Ok(ApiResponse<LoginResponse>.Ok(response, "Registration successful."));
+            }
+            catch (Exceptions.UnauthorizedActionException ex)
+            {
+                return StatusCode(ex.StatusCode, ApiResponse.Fail(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Registration failed for email {Email}", request.Email);
+                return StatusCode(500, ApiResponse.Fail("An unexpected error occurred during registration."));
+            }
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {

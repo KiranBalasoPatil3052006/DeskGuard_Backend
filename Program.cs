@@ -53,7 +53,7 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
 }
 else
 {
-    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=deskguard;Username=postgres;Password=postgres";
     Log.Information("Using DefaultConnection string for PostgreSQL");
 }
 

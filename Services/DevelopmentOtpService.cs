@@ -29,7 +29,7 @@ namespace DeskGuardBackend.Services
             _logger = logger;
         }
 
-        private static string NormalizeMobileNumber(string mobileNumber)
+        private static string NormalizeMobileNumber(string? mobileNumber)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber)) return string.Empty;
             return mobileNumber.Trim().Replace(" ", "").Replace("-", "").Replace("+91", "");

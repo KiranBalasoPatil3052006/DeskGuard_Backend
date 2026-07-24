@@ -14,6 +14,9 @@ namespace DeskGuardBackend.Entities
         /// <summary>FK to the company this machine belongs to.</summary>
         public long? CompanyId { get; set; }
 
+        /// <summary>FK to the AMC customer this machine belongs to.</summary>
+        public long? CustomerId { get; set; }
+
         /// <summary>FK to the user this machine is assigned to (nullable).</summary>
         public long? UserId { get; set; }
 
@@ -83,6 +86,9 @@ namespace DeskGuardBackend.Entities
         // Navigation properties
         /// <summary>Company this machine belongs to.</summary>
         public Company? Company { get; set; }
+
+        /// <summary>AMC Customer this machine belongs to.</summary>
+        public Customer? Customer { get; set; }
 
         /// <summary>User this machine is assigned to.</summary>
         public User? AssignedUser { get; set; }

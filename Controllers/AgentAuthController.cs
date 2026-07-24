@@ -57,8 +57,8 @@ namespace DeskGuardBackend.Controllers
                     return BadRequest(ApiResponse.Fail("Mobile number and OTP are required."));
                 }
 
-                var otpRecord = await _otpService.VerifyOtpAsync(request.MobileNumber, request.Otp);
-                if (otpRecord == null)
+                var isValidOtp = await _otpService.VerifyOtpAsync(request.MobileNumber, request.Otp);
+                if (!isValidOtp)
                 {
                     return UnprocessableEntity(ApiResponse.Fail("Invalid or expired OTP."));
                 }

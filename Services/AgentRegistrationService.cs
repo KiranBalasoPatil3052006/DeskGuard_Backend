@@ -46,15 +46,55 @@ namespace DeskGuardBackend.Services
 
                 using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
+                // Determine company and customer grouping
+                long companyId = user.CompanyId ?? 1;
+                long? customerId = null;
+
+                var compName = (!string.IsNullOrWhiteSpace(dto.CompanyName) ? dto.CompanyName : "Default Enterprise").Trim();
+                var mobNum = (!string.IsNullOrWhiteSpace(dto.MobileNumber) ? dto.MobileNumber : "").Trim();
+                var custName = (!string.IsNullOrWhiteSpace(dto.CustomerName) ? dto.CustomerName : compName).Trim();
+
+                var customer = await _dbContext.Customers
+                    .FirstOrDefaultAsync(c => c.CompanyName.ToLower() == compName.ToLower() && c.MobileNumber == mobNum);
+
+                if (customer == null)
+                {
+                    var totalCust = await _dbContext.Customers.CountAsync();
+                    customer = new Customer
+                    {
+                        CustomerCode = $"CUST-{1001 + totalCust}",
+                        CompanyName = compName,
+                        CustomerName = custName,
+                        MobileNumber = mobNum,
+                        Email = dto.Email,
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await _dbContext.Customers.AddAsync(customer);
+                    await _dbContext.SaveChangesAsync();
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(custName)) customer.CustomerName = custName;
+                    if (!string.IsNullOrWhiteSpace(dto.Email)) customer.Email = dto.Email;
+                    customer.UpdatedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                customerId = customer.Id;
+
                 var machine = new Machine
                 {
-                    CompanyId = user.CompanyId,
+                    CompanyId = companyId,
+                    CustomerId = customerId,
                     UserId = user.Id,
                     MachineUid = dto.MachineUid,
                     Hostname = dto.Hostname,
                     OperatingSystem = dto.OperatingSystem,
                     IsOnline = false,
-                    IsActive = false
+                    IsActive = false,
+                    EmployeeMobileNumber = dto.MobileNumber
                 };
 
                 await _dbContext.Machines.AddAsync(machine);
@@ -81,7 +121,7 @@ namespace DeskGuardBackend.Services
 
                 await _auditLogService.LogAsync(
                     EventType.Register.ToString(),
-                    $"Machine registered: {machine.MachineUid} for company ID: {user.CompanyId}",
+                    $"Machine registered: {machine.MachineUid} for company ID: {companyId}",
                     user: user,
                     machine: machine
                 );

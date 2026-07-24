@@ -18,6 +18,7 @@ namespace DeskGuardBackend.Data
 
         // Core
         public DbSet<Company> Companies => Set<Company>();
+        public DbSet<Customer> Customers => Set<Customer>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Machine> Machines => Set<Machine>();
         public DbSet<MachineToken> MachineTokens => Set<MachineToken>();
@@ -33,6 +34,13 @@ namespace DeskGuardBackend.Data
         public DbSet<FirewallStatus> FirewallStatuses => Set<FirewallStatus>();
         public DbSet<LoginActivity> LoginActivities => Set<LoginActivity>();
         public DbSet<UsbActivity> UsbActivities => Set<UsbActivity>();
+        public DbSet<SecuritySetting> SecuritySettings => Set<SecuritySetting>();
+        public DbSet<UserLoginHistory> UserLoginHistories => Set<UserLoginHistory>();
+
+        // Notifications & SMTP
+        public DbSet<SmtpConfiguration> SmtpConfigurations => Set<SmtpConfiguration>();
+        public DbSet<NotificationRule> NotificationRules => Set<NotificationRule>();
+        public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
 
         // Monitoring
         public DbSet<WindowsService> WindowsServices => Set<WindowsService>();
@@ -82,9 +90,13 @@ namespace DeskGuardBackend.Data
                 e.HasIndex(c => c.IsActive);
                 e.HasIndex(c => c.Email).IsUnique();
                 e.Property(c => c.Name).HasMaxLength(255).IsRequired();
+                e.Property(c => c.CustomerId).HasMaxLength(100);
                 e.Property(c => c.Email).HasMaxLength(255);
                 e.Property(c => c.Phone).HasMaxLength(50);
                 e.Property(c => c.Website).HasMaxLength(255);
+                e.Property(c => c.AmcPlan).HasMaxLength(100);
+                e.Property(c => c.AmcStartDate);
+                e.Property(c => c.AmcEndDate);
 
                 e.HasOne(c => c.AlertProfile)
                     .WithMany(p => p.AssignedCompanies)
@@ -121,12 +133,27 @@ namespace DeskGuardBackend.Data
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
+            // ========== CUSTOMERS ==========
+            modelBuilder.Entity<Customer>(e =>
+            {
+                e.ToTable("customers");
+                e.HasIndex(c => new { c.CompanyName, c.MobileNumber });
+                e.Property(c => c.CustomerCode).HasMaxLength(100).IsRequired();
+                e.Property(c => c.CompanyName).HasMaxLength(255).IsRequired();
+                e.Property(c => c.CustomerName).HasMaxLength(255).IsRequired();
+                e.Property(c => c.MobileNumber).HasMaxLength(50).IsRequired();
+                e.Property(c => c.Email).HasMaxLength(255);
+                e.Property(c => c.Status).HasMaxLength(50).HasDefaultValue("Active");
+                e.Property(c => c.Remarks).HasMaxLength(1000);
+            });
+
             // ========== MACHINES ==========
             modelBuilder.Entity<Machine>(e =>
             {
                 e.ToTable("machines");
                 e.HasIndex(m => m.MachineUid).IsUnique();
                 e.HasIndex(m => m.CompanyId);
+                e.HasIndex(m => m.CustomerId);
                 e.HasIndex(m => m.UserId);
                 e.HasIndex(m => m.IsOnline);
                 e.HasIndex(m => new { m.CompanyId, m.IsOnline }); // Dashboard filter
@@ -148,6 +175,11 @@ namespace DeskGuardBackend.Data
                     .WithMany(c => c.Machines)
                     .HasForeignKey(m => m.CompanyId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(m => m.Customer)
+                    .WithMany(c => c.Machines)
+                    .HasForeignKey(m => m.CustomerId)
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 e.HasOne(m => m.AssignedUser)
                     .WithMany(u => u.Machines)
@@ -478,6 +510,8 @@ namespace DeskGuardBackend.Data
             modelBuilder.Entity<Report>(e =>
             {
                 e.ToTable("reports");
+                e.Property(r => r.FileContent).HasColumnName("file_content");
+                e.Property(r => r.GeneratorName).HasColumnName("generator_name").HasMaxLength(255);
                 e.HasOne(r => r.Generator).WithMany(u => u.Reports)
                     .HasForeignKey(r => r.GeneratedBy).OnDelete(DeleteBehavior.SetNull);
             });
@@ -649,6 +683,17 @@ namespace DeskGuardBackend.Data
                     if (createdAtProp != null && (createdAtProp.CurrentValue == null ||
                         (createdAtProp.CurrentValue is DateTime dt && dt == default)))
                         createdAtProp.CurrentValue = DateTime.UtcNow;
+                }
+
+                // Automatically normalize all DateTime properties to UTC to prevent Npgsql DateTimeKind errors
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.CurrentValue is DateTime dtVal && dtVal.Kind != DateTimeKind.Utc)
+                    {
+                        prop.CurrentValue = dtVal.Kind == DateTimeKind.Local
+                            ? dtVal.ToUniversalTime()
+                            : DateTime.SpecifyKind(dtVal, DateTimeKind.Utc);
+                    }
                 }
             }
         }

@@ -61,4 +61,27 @@ namespace DeskGuardBackend.DTOs.Common
             };
         }
     }
+
+    /// <summary>
+    /// Generic container for paginated list responses.
+    /// </summary>
+    public class PaginatedResult<T>
+    {
+        public System.Collections.Generic.List<T> Data { get; set; } = new System.Collections.Generic.List<T>();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PerPage { get; set; }
+        public int TotalPages { get; set; }
+
+        public PaginatedResult() { }
+
+        public PaginatedResult(System.Collections.Generic.List<T> data, int total, int page, int perPage)
+        {
+            Data = data;
+            Total = total;
+            Page = page;
+            PerPage = perPage;
+            TotalPages = perPage > 0 ? (int)System.Math.Ceiling(total / (double)perPage) : 0;
+        }
+    }
 }

@@ -227,5 +227,12 @@ namespace DeskGuardBackend.Controllers
             var hashBytes = sha256.ComputeHash(bytes);
             return Convert.ToHexString(hashBytes).ToLowerInvariant();
         }
+
+        [HttpGet("health")]
+        [AllowAnonymous]
+        public IActionResult Health()
+        {
+            return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+        }
     }
 }

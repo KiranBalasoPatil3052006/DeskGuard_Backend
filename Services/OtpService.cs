@@ -71,7 +71,16 @@ namespace DeskGuardBackend.Services
             }
         }
 
-        public async Task<OtpCode?> VerifyOtpAsync(string mobileNumber, string otp)
+        public async Task<bool> IsCustomerRegisteredAsync(string mobileNumber)
+        {
+            if (string.IsNullOrWhiteSpace(mobileNumber)) return false;
+            var cleanMobile = mobileNumber.Trim().Replace(" ", "").Replace("-", "").Replace("+91", "");
+
+            return await _dbContext.Users.AnyAsync(u => u.MobileNumber == cleanMobile || u.Phone == cleanMobile) ||
+                   await _dbContext.Customers.AnyAsync(c => c.MobileNumber == cleanMobile);
+        }
+
+        public async Task<bool> VerifyOtpAsync(string mobileNumber, string otp)
         {
             var otpRecord = await _dbContext.OtpCodes
                 .Where(o => o.MobileNumber == mobileNumber && !o.IsUsed && o.ExpiresAt > DateTime.UtcNow && o.Otp == otp)
@@ -81,7 +90,7 @@ namespace DeskGuardBackend.Services
             if (otpRecord == null)
             {
                 _logger.LogWarning("OTP verification failed for mobile: {MobileNumber}", mobileNumber);
-                return null;
+                return false;
             }
 
             otpRecord.IsUsed = true;
@@ -89,7 +98,7 @@ namespace DeskGuardBackend.Services
             await _dbContext.SaveChangesAsync();
 
             _logger.LogInformation("OTP verified successfully for mobile: {MobileNumber}", mobileNumber);
-            return otpRecord;
+            return true;
         }
 
         public async Task<User> FindOrCreateUserAsync(string mobileNumber)

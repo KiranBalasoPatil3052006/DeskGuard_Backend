@@ -16,17 +16,20 @@ namespace DeskGuardBackend.Services
         private readonly DeskGuardDbContext _dbContext;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IAuditLogService _auditLogService;
+        private readonly ISecurityService _securityService;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             DeskGuardDbContext dbContext,
             IJwtTokenService jwtTokenService,
             IAuditLogService auditLogService,
+            ISecurityService securityService,
             ILogger<AuthService> logger)
         {
             _dbContext = dbContext;
             _jwtTokenService = jwtTokenService;
             _auditLogService = auditLogService;
+            _securityService = securityService;
             _logger = logger;
         }
 
@@ -45,8 +48,35 @@ namespace DeskGuardBackend.Services
                         .ThenInclude(ur => ur.Role)
                     .FirstOrDefaultAsync(u => u.Email == request.Email);
 
+                var securitySettings = await _securityService.GetSecuritySettingsAsync(user?.CompanyId);
+
+                // Check active lockout
+                if (user != null && user.LockoutEndAt.HasValue && user.LockoutEndAt.Value > DateTime.UtcNow)
+                {
+                    var remainingMins = Math.Max(1, (int)Math.Ceiling((user.LockoutEndAt.Value - DateTime.UtcNow).TotalMinutes));
+                    await _securityService.RecordLoginHistoryAsync(user.Id, request.Email, false, "Account temporarily locked", null, null, user.CompanyId);
+                    throw new UnauthorizedActionException($"Your account is temporarily locked due to multiple failed login attempts. Please try again in {remainingMins} minutes.", 403);
+                }
+
                 if (user == null || string.IsNullOrEmpty(user.Password) || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                 {
+                    if (user != null && securitySettings.MaxFailedLoginAttempts > 0)
+                    {
+                        user.FailedLoginAttempts++;
+                        if (user.FailedLoginAttempts >= securitySettings.MaxFailedLoginAttempts)
+                        {
+                            user.LockoutEndAt = DateTime.UtcNow.AddMinutes(securitySettings.AccountLockoutDurationMinutes);
+                            await _auditLogService.LogAsync(
+                                EventType.Update.ToString(),
+                                $"Account temporarily locked out for email {user.Email} after {user.FailedLoginAttempts} failed attempts.",
+                                user: user
+                            );
+                        }
+                        await _dbContext.SaveChangesAsync();
+                    }
+
+                    await _securityService.RecordLoginHistoryAsync(user?.Id, request.Email, false, "Invalid email or password", null, null, user?.CompanyId);
+
                     await _auditLogService.LogAsync(
                         EventType.Login.ToString(),
                         $"Failed login attempt for email: {request.Email}",
@@ -58,6 +88,7 @@ namespace DeskGuardBackend.Services
 
                 if (!user.IsActive)
                 {
+                    await _securityService.RecordLoginHistoryAsync(user.Id, user.Email!, false, "Account deactivated", null, null, user.CompanyId);
                     await _auditLogService.LogAsync(
                         EventType.Login.ToString(),
                         $"Login attempt for inactive account: {user.Email}",
@@ -67,9 +98,15 @@ namespace DeskGuardBackend.Services
                     throw new UnauthorizedActionException("Your account has been deactivated. Please contact your administrator.", 403);
                 }
 
-                var token = _jwtTokenService.GenerateToken(user);
+                // Reset failed attempts on clean login
+                user.FailedLoginAttempts = 0;
+                user.LockoutEndAt = null;
                 user.LastLoginAt = DateTime.UtcNow;
                 await _dbContext.SaveChangesAsync();
+
+                await _securityService.RecordLoginHistoryAsync(user.Id, user.Email!, true, null, null, null, user.CompanyId);
+
+                var token = _jwtTokenService.GenerateToken(user);
 
                 await _auditLogService.LogAsync(
                     EventType.Login.ToString(),
@@ -115,6 +152,8 @@ namespace DeskGuardBackend.Services
                 {
                     throw new UnauthorizedActionException("Name, email, and password are required.", 422);
                 }
+
+                await _securityService.ValidatePasswordAgainstPolicyAsync(request.Password);
 
                 var existingUser = await _dbContext.Users.AnyAsync(u => u.Email == request.Email);
                 if (existingUser)

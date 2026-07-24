@@ -66,7 +66,10 @@ namespace DeskGuardBackend.Services.PayloadProcessors
         private static DateTime? ParseDateTime(string? value)
         {
             if (string.IsNullOrEmpty(value)) return null;
-            if (DateTime.TryParse(value, out var dt)) return dt;
+            if (DateTime.TryParse(value, out var dt))
+            {
+                return dt.Kind == DateTimeKind.Utc ? dt : dt.Kind == DateTimeKind.Local ? dt.ToUniversalTime() : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            }
             return null;
         }
     }

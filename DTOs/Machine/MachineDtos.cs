@@ -15,6 +15,34 @@ namespace DeskGuardBackend.DTOs.Machine
 
         [JsonPropertyName("operating_system")]
         public string? OperatingSystem { get; set; }
+
+        // Customer/AMC information collected during installation
+        [JsonPropertyName("customer_id")]
+        public string? CustomerId { get; set; }
+
+        [JsonPropertyName("customer_name")]
+        public string? CustomerName { get; set; }
+
+        [JsonPropertyName("company_name")]
+        public string? CompanyName { get; set; }
+
+        [JsonPropertyName("mobile_number")]
+        public string? MobileNumber { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("address")]
+        public string? Address { get; set; }
+
+        [JsonPropertyName("amc_plan")]
+        public string? AmcPlan { get; set; }
+
+        [JsonPropertyName("amc_start_date")]
+        public DateTime? AmcStartDate { get; set; }
+
+        [JsonPropertyName("amc_end_date")]
+        public DateTime? AmcEndDate { get; set; }
     }
 
     public class MachineResponseDto

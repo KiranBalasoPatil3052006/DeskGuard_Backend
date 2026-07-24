@@ -43,6 +43,10 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("alert_rule_id");
 
+                    b.Property<string>("AlertType")
+                        .HasColumnType("text")
+                        .HasColumnName("alert_type");
+
                     b.Property<long>("CompanyId")
                         .HasColumnType("bigint")
                         .HasColumnName("company_id");
@@ -51,17 +55,41 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<decimal?>("CurrentValue")
+                        .HasColumnType("numeric")
+                        .HasColumnName("current_value");
+
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<DateTime?>("FirstDetectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_detected_at");
+
+                    b.Property<DateTime?>("LastDetectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_detected_at");
 
                     b.Property<long>("MachineId")
                         .HasColumnType("bigint")
                         .HasColumnName("machine_id");
 
+                    b.Property<decimal?>("MaxRecordedValue")
+                        .HasColumnType("numeric")
+                        .HasColumnName("max_recorded_value");
+
                     b.Property<string>("Metadata")
                         .HasColumnType("jsonb")
                         .HasColumnName("metadata");
+
+                    b.Property<int>("OccurrenceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("occurrence_count");
 
                     b.Property<string>("ResolutionNote")
                         .HasColumnType("text")
@@ -75,6 +103,10 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("resolved_by");
 
+                    b.Property<string>("Resource")
+                        .HasColumnType("text")
+                        .HasColumnName("resource");
+
                     b.Property<string>("Severity")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -86,6 +118,10 @@ namespace DeskGuardBackend.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("status");
+
+                    b.Property<decimal?>("ThresholdValue")
+                        .HasColumnType("numeric")
+                        .HasColumnName("threshold_value");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -677,9 +713,27 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("alert_profile_id");
 
+                    b.Property<DateTime?>("AmcEndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("amc_end_date");
+
+                    b.Property<string>("AmcPlan")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("amc_plan");
+
+                    b.Property<DateTime?>("AmcStartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("amc_start_date");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("customer_id");
 
                     b.Property<string>("Email")
                         .HasMaxLength(255)
@@ -778,6 +832,74 @@ namespace DeskGuardBackend.Migrations
                     b.ToTable("configuration_baselines", (string)null);
                 });
 
+            modelBuilder.Entity("DeskGuardBackend.Entities.Customer", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("company_name");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("customer_code");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("MobileNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("mobile_number");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("remarks");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customers");
+
+                    b.HasIndex("CompanyName", "MobileNumber")
+                        .HasDatabaseName("ix_customers_company_name_mobile_number");
+
+                    b.ToTable("customers", (string)null);
+                });
+
             modelBuilder.Entity("DeskGuardBackend.Entities.DeviceEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -824,6 +946,84 @@ namespace DeskGuardBackend.Migrations
                     b.ToTable("device_events", (string)null);
                 });
 
+            modelBuilder.Entity("DeskGuardBackend.Entities.EmailLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long?>("AlertId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("alert_id");
+
+                    b.Property<long?>("CompanyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<long?>("MachineId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("machine_id");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("recipient_email");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_count");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("SmtpResponse")
+                        .HasColumnType("text")
+                        .HasColumnName("smtp_response");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_email_logs");
+
+                    b.HasIndex("AlertId")
+                        .HasDatabaseName("ix_email_logs_alert_id");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_email_logs_company_id");
+
+                    b.HasIndex("MachineId")
+                        .HasDatabaseName("ix_email_logs_machine_id");
+
+                    b.ToTable("email_logs", (string)null);
+                });
+
             modelBuilder.Entity("DeskGuardBackend.Entities.EmailRecipient", b =>
                 {
                     b.Property<long>("Id")
@@ -840,6 +1040,10 @@ namespace DeskGuardBackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("Department")
+                        .HasColumnType("text")
+                        .HasColumnName("department");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -1353,6 +1557,10 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("custom_alert_profile_id");
 
+                    b.Property<long?>("CustomerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("customer_id");
+
                     b.Property<string>("DeviceName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
@@ -1436,6 +1644,9 @@ namespace DeskGuardBackend.Migrations
 
                     b.HasIndex("CustomAlertProfileId")
                         .HasDatabaseName("ix_machines_custom_alert_profile_id");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_machines_customer_id");
 
                     b.HasIndex("IsOnline")
                         .HasDatabaseName("ix_machines_is_online");
@@ -1909,6 +2120,58 @@ namespace DeskGuardBackend.Migrations
                     b.ToTable("notifications", (string)null);
                 });
 
+            modelBuilder.Entity("DeskGuardBackend.Entities.NotificationRule", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("category");
+
+                    b.Property<long?>("CompanyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("event_type");
+
+                    b.Property<bool>("SendEmail")
+                        .HasColumnType("boolean")
+                        .HasColumnName("send_email");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_rules");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_notification_rules_company_id");
+
+                    b.ToTable("notification_rules", (string)null);
+                });
+
             modelBuilder.Entity("DeskGuardBackend.Entities.OtpCode", b =>
                 {
                     b.Property<long>("Id")
@@ -2185,6 +2448,10 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<byte[]>("FileContent")
+                        .HasColumnType("bytea")
+                        .HasColumnName("file_content");
+
                     b.Property<string>("FilePath")
                         .HasColumnType("text")
                         .HasColumnName("file_path");
@@ -2196,6 +2463,11 @@ namespace DeskGuardBackend.Migrations
                     b.Property<long?>("GeneratedBy")
                         .HasColumnType("bigint")
                         .HasColumnName("generated_by");
+
+                    b.Property<string>("GeneratorName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("generator_name");
 
                     b.Property<string>("Parameters")
                         .HasColumnType("text")
@@ -2270,34 +2542,34 @@ namespace DeskGuardBackend.Migrations
                         new
                         {
                             Id = 1L,
-                            CreatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(971),
+                            CreatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8438),
                             GuardName = "web",
                             Name = "Super Admin",
-                            UpdatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(977)
+                            UpdatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8446)
                         },
                         new
                         {
                             Id = 2L,
-                            CreatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(1060),
+                            CreatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8454),
                             GuardName = "web",
                             Name = "Company Admin",
-                            UpdatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(1061)
+                            UpdatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8455)
                         },
                         new
                         {
                             Id = 3L,
-                            CreatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(1066),
+                            CreatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8458),
                             GuardName = "web",
                             Name = "Support Technician",
-                            UpdatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(1067)
+                            UpdatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8459)
                         },
                         new
                         {
                             Id = 4L,
-                            CreatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(1090),
+                            CreatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8471),
                             GuardName = "web",
                             Name = "Admin",
-                            UpdatedAt = new DateTime(2026, 7, 15, 8, 12, 15, 230, DateTimeKind.Utc).AddTicks(1091)
+                            UpdatedAt = new DateTime(2026, 7, 23, 16, 21, 57, 328, DateTimeKind.Utc).AddTicks(8472)
                         });
                 });
 
@@ -2370,6 +2642,153 @@ namespace DeskGuardBackend.Migrations
                         .HasDatabaseName("ix_security_baselines_machine_id");
 
                     b.ToTable("security_baselines", (string)null);
+                });
+
+            modelBuilder.Entity("DeskGuardBackend.Entities.SecuritySetting", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AccountLockoutDurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("account_lockout_duration_minutes");
+
+                    b.Property<long?>("CompanyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("IdleSessionTimeoutMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("idle_session_timeout_minutes");
+
+                    b.Property<int>("MaxFailedLoginAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_failed_login_attempts");
+
+                    b.Property<int>("MinPasswordLength")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_password_length");
+
+                    b.Property<bool>("RequireLowercase")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_lowercase");
+
+                    b.Property<bool>("RequireNumbers")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_numbers");
+
+                    b.Property<bool>("RequireSpecialChars")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_special_chars");
+
+                    b.Property<bool>("RequireUppercase")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_uppercase");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_settings");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_security_settings_company_id");
+
+                    b.ToTable("security_settings", (string)null);
+                });
+
+            modelBuilder.Entity("DeskGuardBackend.Entities.SmtpConfiguration", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long?>("CompanyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("EnableSsl")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enable_ssl");
+
+                    b.Property<string>("EncryptedPassword")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("encrypted_password");
+
+                    b.Property<string>("EncryptionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("encryption_type");
+
+                    b.Property<string>("FromEmail")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("from_email");
+
+                    b.Property<string>("FromName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("from_name");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("host");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("integer")
+                        .HasColumnName("port");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_count");
+
+                    b.Property<int>("RetryDelaySeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_delay_seconds");
+
+                    b.Property<int>("TimeoutSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("timeout_seconds");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("username");
+
+                    b.HasKey("Id")
+                        .HasName("pk_smtp_configurations");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_smtp_configurations_company_id");
+
+                    b.ToTable("smtp_configurations", (string)null);
                 });
 
             modelBuilder.Entity("DeskGuardBackend.Entities.SoftwareBaseline", b =>
@@ -2631,6 +3050,10 @@ namespace DeskGuardBackend.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("employee_id");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_login_attempts");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -2642,6 +3065,10 @@ namespace DeskGuardBackend.Migrations
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
+
+                    b.Property<DateTime?>("LockoutEndAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lockout_end_at");
 
                     b.Property<string>("MobileNumber")
                         .HasMaxLength(20)
@@ -2695,6 +3122,78 @@ namespace DeskGuardBackend.Migrations
                         .HasDatabaseName("ix_users_mobile_number");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("DeskGuardBackend.Entities.UserLoginHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Browser")
+                        .HasColumnType("text")
+                        .HasColumnName("browser");
+
+                    b.Property<long?>("CompanyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("ip_address");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("login_time");
+
+                    b.Property<DateTime?>("LogoutTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("logout_time");
+
+                    b.Property<string>("OperatingSystem")
+                        .HasColumnType("text")
+                        .HasColumnName("operating_system");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text")
+                        .HasColumnName("user_agent");
+
+                    b.Property<long?>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_login_histories");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_login_histories_user_id");
+
+                    b.ToTable("user_login_histories", (string)null);
                 });
 
             modelBuilder.Entity("DeskGuardBackend.Entities.UserRole", b =>
@@ -2990,6 +3489,30 @@ namespace DeskGuardBackend.Migrations
                     b.Navigation("Machine");
                 });
 
+            modelBuilder.Entity("DeskGuardBackend.Entities.EmailLog", b =>
+                {
+                    b.HasOne("DeskGuardBackend.Entities.Alert", "Alert")
+                        .WithMany()
+                        .HasForeignKey("AlertId")
+                        .HasConstraintName("fk_email_logs_alerts_alert_id");
+
+                    b.HasOne("DeskGuardBackend.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .HasConstraintName("fk_email_logs_companies_company_id");
+
+                    b.HasOne("DeskGuardBackend.Entities.Machine", "Machine")
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .HasConstraintName("fk_email_logs_machines_machine_id");
+
+                    b.Navigation("Alert");
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Machine");
+                });
+
             modelBuilder.Entity("DeskGuardBackend.Entities.EmailRecipient", b =>
                 {
                     b.HasOne("DeskGuardBackend.Entities.Company", "Company")
@@ -3095,6 +3618,12 @@ namespace DeskGuardBackend.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_machines_alert_profiles_custom_alert_profile_id");
 
+                    b.HasOne("DeskGuardBackend.Entities.Customer", "Customer")
+                        .WithMany("Machines")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_machines_customers_customer_id");
+
                     b.HasOne("DeskGuardBackend.Entities.User", "AssignedUser")
                         .WithMany("Machines")
                         .HasForeignKey("UserId")
@@ -3106,6 +3635,8 @@ namespace DeskGuardBackend.Migrations
                     b.Navigation("Company");
 
                     b.Navigation("CustomAlertProfile");
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("DeskGuardBackend.Entities.MachineConnectedDevice", b =>
@@ -3179,6 +3710,16 @@ namespace DeskGuardBackend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DeskGuardBackend.Entities.NotificationRule", b =>
+                {
+                    b.HasOne("DeskGuardBackend.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .HasConstraintName("fk_notification_rules_companies_company_id");
+
+                    b.Navigation("Company");
+                });
+
             modelBuilder.Entity("DeskGuardBackend.Entities.ProcessLog", b =>
                 {
                     b.HasOne("DeskGuardBackend.Entities.Machine", "Machine")
@@ -3240,6 +3781,26 @@ namespace DeskGuardBackend.Migrations
                         .HasConstraintName("fk_security_baselines_machines_machine_id");
 
                     b.Navigation("Machine");
+                });
+
+            modelBuilder.Entity("DeskGuardBackend.Entities.SecuritySetting", b =>
+                {
+                    b.HasOne("DeskGuardBackend.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .HasConstraintName("fk_security_settings_companies_company_id");
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("DeskGuardBackend.Entities.SmtpConfiguration", b =>
+                {
+                    b.HasOne("DeskGuardBackend.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .HasConstraintName("fk_smtp_configurations_companies_company_id");
+
+                    b.Navigation("Company");
                 });
 
             modelBuilder.Entity("DeskGuardBackend.Entities.SoftwareBaseline", b =>
@@ -3309,6 +3870,16 @@ namespace DeskGuardBackend.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("DeskGuardBackend.Entities.UserLoginHistory", b =>
+                {
+                    b.HasOne("DeskGuardBackend.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .HasConstraintName("fk_user_login_histories_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DeskGuardBackend.Entities.UserRole", b =>
                 {
                     b.HasOne("DeskGuardBackend.Entities.Role", "Role")
@@ -3375,6 +3946,11 @@ namespace DeskGuardBackend.Migrations
                     b.Navigation("Machines");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("DeskGuardBackend.Entities.Customer", b =>
+                {
+                    b.Navigation("Machines");
                 });
 
             modelBuilder.Entity("DeskGuardBackend.Entities.Machine", b =>

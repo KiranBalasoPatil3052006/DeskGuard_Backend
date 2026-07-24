@@ -126,3 +126,25 @@ The Alert Threshold Management module adds profile-based threshold evaluation. P
 - Creates both `alert_profiles` and `alert_thresholds` tables
 - Adds FK columns to `companies` and `machines`
 - Seeds 3 default profiles
+
+---
+
+## Reports & AMC Contract Schema Extensions
+
+### Overview
+Extends the central metadata profiles of companies with active AMC properties to support corporate compliance reports.
+
+### Extended Columns
+
+#### Table: `companies`
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `amc_plan` | varchar(100) | nullable | Contracted AMC Plan description (e.g., Gold Premium Support) |
+| `amc_start_date` | timestamp | nullable | Start date of the current AMC contract period |
+| `amc_end_date` | timestamp | nullable | Expiration date of the current AMC contract period |
+
+### Migration
+- **Migration name**: `20260720164751_AddAmcFieldsToCompany`
+- Adds `amc_plan`, `amc_start_date`, and `amc_end_date` columns to `companies` table.
+- Seeds default company ID 1 with a default contract (Gold plan) for DEV environment verification.
+

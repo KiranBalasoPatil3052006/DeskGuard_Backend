@@ -96,3 +96,17 @@ The Alert Threshold Management module introduces profile-based alert threshold c
 
 ### DI Registration
 - `builder.Services.AddScoped<IAlertProfileService, AlertProfileService>()` in Program.cs
+
+---
+
+## ITAM & AMC Reports Engine Module
+
+### Overview
+The Reports Engine aggregates telemetry snapshots and contract attributes to generate structured PDF compliance summaries and hardware checklists.
+
+### Backend Implementations
+- **ReportModels.cs**: DTO schemas for parameters and layout rendering data structure hierarchies.
+- **IReportGenerationService.cs / ReportGenerationService.cs**: Queries and formats PostgreSQL telemetry snapshots concurrently.
+- **ReportApiController.cs**: Enforces Super Admin / Admin role access, tenant scopes, and streams PDF documents to React.
+- **AmcHealthSummaryReportDocument.cs / AssetInventoryReportDocument.cs**: QuestPDF layout definitions.
+

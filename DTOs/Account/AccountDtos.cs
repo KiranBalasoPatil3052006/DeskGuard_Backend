@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace DeskGuardBackend.DTOs.Account
@@ -10,6 +12,9 @@ namespace DeskGuardBackend.DTOs.Account
         [JsonPropertyName("email")]
         public string Email { get; set; } = string.Empty;
 
+        [JsonPropertyName("mobile_number")]
+        public string? MobileNumber { get; set; }
+
         [JsonPropertyName("password")]
         public string Password { get; set; } = string.Empty;
 
@@ -18,6 +23,12 @@ namespace DeskGuardBackend.DTOs.Account
 
         [JsonPropertyName("employee_id")]
         public string EmployeeId { get; set; } = string.Empty;
+
+        [JsonPropertyName("role")]
+        public string Role { get; set; } = "Admin";
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "active";
     }
 
     public class UpdateAccountRequest
@@ -28,8 +39,29 @@ namespace DeskGuardBackend.DTOs.Account
         [JsonPropertyName("email")]
         public string? Email { get; set; }
 
+        [JsonPropertyName("mobile_number")]
+        public string? MobileNumber { get; set; }
+
         [JsonPropertyName("employee_id")]
         public string? EmployeeId { get; set; }
+
+        [JsonPropertyName("role")]
+        public string? Role { get; set; }
+
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+    }
+
+    public class ResetPasswordRequest
+    {
+        [JsonPropertyName("new_password")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [JsonPropertyName("confirm_password")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        [JsonPropertyName("must_change_password")]
+        public bool MustChangePassword { get; set; } = true;
     }
 
     public class AccountDto
@@ -45,6 +77,9 @@ namespace DeskGuardBackend.DTOs.Account
 
         [JsonPropertyName("email")]
         public string? Email { get; set; }
+
+        [JsonPropertyName("mobile_number")]
+        public string? MobileNumber { get; set; }
 
         [JsonPropertyName("role")]
         public string Role { get; set; } = string.Empty;
@@ -91,13 +126,22 @@ namespace DeskGuardBackend.DTOs.Account
         [JsonPropertyName("search")]
         public string? Search { get; set; }
 
+        [JsonPropertyName("role")]
+        public string? Role { get; set; }
+
         [JsonPropertyName("status")]
         public string? Status { get; set; }
+
+        [JsonPropertyName("sort_by")]
+        public string? SortBy { get; set; } = "created_at";
+
+        [JsonPropertyName("sort_order")]
+        public string? SortOrder { get; set; } = "desc";
 
         [JsonPropertyName("page")]
         public int Page { get; set; } = 1;
 
         [JsonPropertyName("per_page")]
-        public int PerPage { get; set; } = 10;
+        public int PerPage { get; set; } = 20;
     }
 }

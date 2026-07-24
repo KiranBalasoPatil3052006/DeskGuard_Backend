@@ -19,17 +19,20 @@ namespace DeskGuardBackend.Services
         private readonly DeskGuardDbContext _dbContext;
         private readonly IAuditLogService _auditLogService;
         private readonly IHubContext<AlertHub> _hubContext;
+        private readonly IEmailQueueService _emailQueueService;
         private readonly ILogger<NotificationService> _logger;
 
         public NotificationService(
             DeskGuardDbContext dbContext,
             IAuditLogService auditLogService,
             IHubContext<AlertHub> hubContext,
+            IEmailQueueService emailQueueService,
             ILogger<NotificationService> logger)
         {
             _dbContext = dbContext;
             _auditLogService = auditLogService;
             _hubContext = hubContext;
+            _emailQueueService = emailQueueService;
             _logger = logger;
         }
 
@@ -193,10 +196,21 @@ namespace DeskGuardBackend.Services
                     return;
                 }
 
-                var companyId = machine.CompanyId;
-                if (companyId == null)
+                var companyId = machine.CompanyId ?? alert.CompanyId;
+                if (companyId == 0)
                 {
                     _logger.LogWarning("NotificationService::SendEmailNotificationAsync - No company for machine ID {MachineId}", machine.Id);
+                    return;
+                }
+
+                // Check notification rules for event type
+                var alertType = alert.AlertType ?? "general";
+                var rule = await _dbContext.NotificationRules
+                    .FirstOrDefaultAsync(r => (r.CompanyId == companyId || r.CompanyId == null) && r.EventType == alertType);
+
+                if (rule != null && !rule.SendEmail)
+                {
+                    _logger.LogInformation("NotificationService::SendEmailNotificationAsync - Email notifications disabled by rule for event type '{EventType}'", alertType);
                     return;
                 }
 
@@ -212,12 +226,10 @@ namespace DeskGuardBackend.Services
 
                 foreach (var recipient in recipients)
                 {
-                    // Replicate email sending behavior — currently logged to Console/File (Mocked SMTP client)
-                    _logger.LogInformation("Mock Email Dispatch - To: {Email}, Subject: [DeskGuard Alert] {Title}, Body: {Description}", 
-                        recipient.Email, alert.Title, alert.Description);
+                    _emailQueueService.QueueEmail(alert, recipient.Email);
                 }
 
-                _logger.LogInformation("Alert email notifications dispatched to {Count} recipients", recipients.Count);
+                _logger.LogInformation("Alert email work items enqueued for {Count} recipients (Alert ID: {AlertId})", recipients.Count, alert.Id);
             }
             catch (Exception ex)
             {

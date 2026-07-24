@@ -45,6 +45,12 @@ namespace DeskGuardBackend.Entities
         /// <summary>Timestamp of last successful login.</summary>
         public DateTime? LastLoginAt { get; set; }
 
+        /// <summary>Number of consecutive failed login attempts.</summary>
+        public int FailedLoginAttempts { get; set; }
+
+        /// <summary>Timestamp when account lockout expires (null = not locked out).</summary>
+        public DateTime? LockoutEndAt { get; set; }
+
         /// <summary>Record creation timestamp (UTC).</summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

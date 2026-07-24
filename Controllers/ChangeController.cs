@@ -50,7 +50,9 @@ namespace DeskGuardBackend.Controllers
 
         [Authorize]
         [HttpGet("changes")]
+        [HttpGet("machines/{id}/changes")]
         public async Task<IActionResult> Index(
+            [FromRoute] long? id = null,
             [FromQuery] string? category = null,
             [FromQuery] string? severity = null,
             [FromQuery] string? status = null,
@@ -68,6 +70,11 @@ namespace DeskGuardBackend.Controllers
                     .Include(c => c.Machine)
                     .Where(c => c.CompanyId == companyId);
 
+                // Support both query param machine_id and route param id
+                long? machineId = id ?? machine_id;
+                if (machineId.HasValue)
+                    query = query.Where(c => c.MachineId == machineId.Value);
+
                 if (!string.IsNullOrEmpty(category))
                     query = query.Where(c => c.Category == category);
 
@@ -76,9 +83,6 @@ namespace DeskGuardBackend.Controllers
 
                 if (!string.IsNullOrEmpty(status))
                     query = query.Where(c => c.Status == status);
-
-                if (machine_id.HasValue)
-                    query = query.Where(c => c.MachineId == machine_id.Value);
 
                 if (days.HasValue)
                 {
@@ -118,102 +122,19 @@ namespace DeskGuardBackend.Controllers
                     })
                     .ToListAsync();
 
-                return Ok(new
-                {
-                    data = items,
-                    total,
-                    current_page = page,
-                    per_page,
-                    last_page = (int)Math.Ceiling((double)total / per_page)
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get changes history");
-                return StatusCode(500, ApiResponse.Fail("Failed to retrieve change history."));
-            }
-        }
-
-        [Authorize]
-        [HttpGet("machines/{id}/changes")]
-        public async Task<IActionResult> MachineChanges(
-            long id,
-            [FromQuery] string? category = null,
-            [FromQuery] string? severity = null,
-            [FromQuery] string? status = null,
-            [FromQuery] int? days = null,
-            [FromQuery] DateTime? date_from = null,
-            [FromQuery] DateTime? date_to = null,
-            [FromQuery] int page = 1,
-            [FromQuery] int per_page = 50)
-        {
-            try
-            {
-                var companyId = GetCompanyId();
-                var machine = await _dbContext.Machines.FirstOrDefaultAsync(m => m.Id == id && m.CompanyId == companyId);
-                if (machine == null) return NotFound(ApiResponse.Fail("Machine not found."));
-
-                var query = _dbContext.ChangeHistories.Where(c => c.MachineId == machine.Id);
-
-                if (!string.IsNullOrEmpty(category))
-                    query = query.Where(c => c.Category == category);
-
-                if (!string.IsNullOrEmpty(severity))
-                    query = query.Where(c => c.Severity == severity);
-
-                if (!string.IsNullOrEmpty(status))
-                    query = query.Where(c => c.Status == status);
-
-                if (days.HasValue)
-                {
-                    var since = DateTime.UtcNow.AddDays(-days.Value);
-                    query = query.Where(c => c.DetectedAt >= since);
-                }
-
-                if (date_from.HasValue)
-                    query = query.Where(c => c.DetectedAt >= date_from.Value);
-
-                if (date_to.HasValue)
-                {
-                    var toLimit = date_to.Value.Date.AddDays(1).AddTicks(-1);
-                    query = query.Where(c => c.DetectedAt <= toLimit);
-                }
-
-                var total = await query.CountAsync();
-                var items = await query
-                    .OrderByDescending(c => c.DetectedAt)
-                    .Skip((page - 1) * per_page)
-                    .Take(per_page)
-                    .Select(c => new
-                    {
-                        c.Id,
-                        category = c.Category,
-                        change_type = c.ChangeType,
-                        severity = c.Severity,
-                        status = c.Status,
-                        item_label = c.ItemLabel,
-                        item_identifier = c.ItemIdentifier,
-                        description = c.Description,
-                        previous_value = c.PreviousValue,
-                        new_value = c.NewValue,
-                        detected_at = c.DetectedAt,
-                        metadata = c.Metadata
-                    })
-                    .ToListAsync();
-
                 return Ok(ApiResponse<object>.Ok(new
                 {
                     data = items,
+                    total,
                     current_page = page,
                     per_page,
-                    total,
                     last_page = (int)Math.Ceiling((double)total / per_page)
                 }));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get machine changes");
-                return StatusCode(500, ApiResponse.Fail("Failed to retrieve machine changes."));
+                _logger.LogError(ex, "Failed to get changes history");
+                return StatusCode(500, ApiResponse.Fail("Failed to retrieve change history."));
             }
         }
 

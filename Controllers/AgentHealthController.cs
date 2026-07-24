@@ -48,7 +48,7 @@ namespace DeskGuardBackend.Controllers
                     return UnprocessableEntity(ApiResponse.Fail("Machine identifier is required."));
                 }
 
-                var companyId = await GetOrCreateCompanyIdAsync();
+                var companyId = await GetOrCreateCompanyIdAsync(rawPayload);
 
                 var systemInfoProp = rawPayload.GetPropertyOrNull("systemInfo");
                 var systemInfo = systemInfoProp?.ValueKind == JsonValueKind.Object ? systemInfoProp.Value : default;
@@ -149,8 +149,51 @@ namespace DeskGuardBackend.Controllers
             return string.Empty;
         }
 
-        private async Task<long> GetOrCreateCompanyIdAsync()
+        private async Task<long> GetOrCreateCompanyIdAsync(JsonElement payload)
         {
+            var companyName = payload.GetStringProperty("companyName") ?? payload.GetStringProperty("company_name");
+            var customerId = payload.GetStringProperty("customerId") ?? payload.GetStringProperty("customer_id");
+
+            // If customer info provided, find or create a matching company
+            if (!string.IsNullOrWhiteSpace(companyName) || !string.IsNullOrWhiteSpace(customerId))
+            {
+                Company? company = null;
+
+                if (!string.IsNullOrWhiteSpace(customerId))
+                {
+                    company = await _dbContext.Companies
+                        .FirstOrDefaultAsync(c => c.CustomerId == customerId);
+                }
+
+                company ??= !string.IsNullOrWhiteSpace(companyName)
+                    ? await _dbContext.Companies
+                        .FirstOrDefaultAsync(c => c.Name == companyName)
+                    : null;
+
+                if (company != null)
+                {
+                    UpdateCompanyFromPayload(company, payload);
+                    company.UpdatedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
+                    return company.Id;
+                }
+
+                // Create new company
+                company = new Company
+                {
+                    CustomerId = customerId,
+                    Name = companyName ?? "Unknown Company",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                UpdateCompanyFromPayload(company, payload);
+                await _dbContext.Companies.AddAsync(company);
+                await _dbContext.SaveChangesAsync();
+                return company.Id;
+            }
+
+            // Fallback to default/first company
             var preferredId = _configuration.GetValue<long>("AgentSettings:DefaultCompanyId");
             if (preferredId > 0)
             {
@@ -163,13 +206,34 @@ namespace DeskGuardBackend.Controllers
 
             var newCompany = new Company
             {
-                Name = "Local Test Company",
-                IsActive = true
+                Name = "Default Company",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
             await _dbContext.Companies.AddAsync(newCompany);
             await _dbContext.SaveChangesAsync();
 
             return newCompany.Id;
+        }
+
+        private static void UpdateCompanyFromPayload(Company company, JsonElement payload)
+        {
+            var customerId = payload.GetStringProperty("customerId") ?? payload.GetStringProperty("customer_id");
+            var email = payload.GetStringProperty("customerEmail") ?? payload.GetStringProperty("customer_email") ?? payload.GetStringProperty("email");
+            var mobile = payload.GetStringProperty("customerMobileNumber") ?? payload.GetStringProperty("customer_mobile_number") ?? payload.GetStringProperty("mobile_number");
+            var address = payload.GetStringProperty("customerAddress") ?? payload.GetStringProperty("customer_address") ?? payload.GetStringProperty("address");
+            var amcPlan = payload.GetStringProperty("amcPlan") ?? payload.GetStringProperty("amc_plan");
+            var amcStartDate = payload.GetStringProperty("amcStartDate") ?? payload.GetStringProperty("amc_start_date");
+            var amcEndDate = payload.GetStringProperty("amcEndDate") ?? payload.GetStringProperty("amc_end_date");
+
+            if (!string.IsNullOrWhiteSpace(customerId)) company.CustomerId = customerId;
+            if (!string.IsNullOrWhiteSpace(email)) company.Email = email;
+            if (!string.IsNullOrWhiteSpace(mobile)) company.Phone = mobile;
+            if (!string.IsNullOrWhiteSpace(address)) company.Address = address;
+            if (!string.IsNullOrWhiteSpace(amcPlan)) company.AmcPlan = amcPlan;
+            if (DateTime.TryParse(amcStartDate, out var startParsed)) company.AmcStartDate = startParsed;
+            if (DateTime.TryParse(amcEndDate, out var endParsed)) company.AmcEndDate = endParsed;
         }
 
         private static string HashToken(string token)

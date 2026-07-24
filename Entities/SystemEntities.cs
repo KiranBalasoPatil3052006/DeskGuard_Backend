@@ -14,6 +14,8 @@ namespace DeskGuardBackend.Entities
         public string? FilePath { get; set; }
         public string? Status { get; set; }
         public string? Parameters { get; set; } // JSON
+        public byte[]? FileContent { get; set; } // Stores the generated PDF bytes
+        public string? GeneratorName { get; set; } // Cached display name of the user who generated
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public Company? Company { get; set; }
@@ -70,6 +72,7 @@ namespace DeskGuardBackend.Entities
         public long CompanyId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string? Name { get; set; }
+        public string? Department { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

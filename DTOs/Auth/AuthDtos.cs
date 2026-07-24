@@ -39,6 +39,15 @@ namespace DeskGuardBackend.DTOs.Auth
 
         [JsonPropertyName("role")]
         public string Role { get; set; } = string.Empty;
+
+        [JsonPropertyName("employee_id")]
+        public string? EmployeeId { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public System.DateTime? CreatedAt { get; set; }
+
+        [JsonPropertyName("last_login_at")]
+        public System.DateTime? LastLoginAt { get; set; }
     }
 
     public class LoginResponse

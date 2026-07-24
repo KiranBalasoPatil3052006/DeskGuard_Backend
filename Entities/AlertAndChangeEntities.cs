@@ -31,10 +31,39 @@ namespace DeskGuardBackend.Entities
         public long CompanyId { get; set; }
         public long MachineId { get; set; }
         public long? AlertRuleId { get; set; }
+
+        /// <summary>Alert type key: cpu_high, ram_high, disk_low, firewall_disabled, antivirus_disabled, offline.</summary>
+        public string? AlertType { get; set; }
+
+        /// <summary>Target resource: CPU, RAM, Drive C:, Firewall, Antivirus, Host.</summary>
+        public string? Resource { get; set; }
+
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string Severity { get; set; } = "medium";
         public string Status { get; set; } = "open";
+
+        /// <summary>Current metric value when evaluated.</summary>
+        public decimal? CurrentValue { get; set; }
+
+        /// <summary>Configured threshold value that triggered alert.</summary>
+        public decimal? ThresholdValue { get; set; }
+
+        /// <summary>Maximum peak value recorded during ongoing incident.</summary>
+        public decimal? MaxRecordedValue { get; set; }
+
+        /// <summary>Timestamp when incident first occurred.</summary>
+        public DateTime? FirstDetectedAt { get; set; }
+
+        /// <summary>Timestamp of most recent telemetry cycle observing the incident.</summary>
+        public DateTime? LastDetectedAt { get; set; }
+
+        /// <summary>Total occurrences count while incident remains active.</summary>
+        public int OccurrenceCount { get; set; } = 1;
+
+        /// <summary>Total duration in seconds once resolved.</summary>
+        public int? DurationSeconds { get; set; }
+
         public long? AcknowledgedBy { get; set; }
         public DateTime? AcknowledgedAt { get; set; }
         public long? ResolvedBy { get; set; }

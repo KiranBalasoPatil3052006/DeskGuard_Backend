@@ -26,11 +26,11 @@ namespace DeskGuardBackend.Controllers
         public MachineController(
             IMachineService machineService,
             DeskGuardDbContext dbContext,
-            ILogger<MachineController> _logger)
+            ILogger<MachineController> logger)
         {
             _machineService = machineService;
             _dbContext = dbContext;
-            this._logger = _logger;
+            _logger = logger;
         }
 
         private long GetCompanyId()
@@ -110,6 +110,7 @@ namespace DeskGuardBackend.Controllers
 
                 object? statusDto = currentStatus != null ? new
                 {
+                    // Primary field names (new standard)
                     cpu_percentage = currentStatus.CpuPercentage,
                     cpu_temperature = currentStatus.CpuTemperature,
                     cpu_clock_speed = currentStatus.CpuClockSpeed,
@@ -132,7 +133,13 @@ namespace DeskGuardBackend.Controllers
                     antivirus_status = currentStatus.AntivirusEnabled == true ? "Enabled" : (currentStatus.AntivirusEnabled == false ? "Disabled" : null),
                     antivirus_name = currentStatus.AntivirusName,
                     firewall_status = currentStatus.FirewallEnabled == true ? "Enabled" : (currentStatus.FirewallEnabled == false ? "Disabled" : null),
-                    pending_updates = pendingUpdateCount
+                    pending_updates = pendingUpdateCount,
+                    // Backward-compatible aliases for frontend
+                    cpu_usage = currentStatus.CpuPercentage,
+                    memory_usage = currentStatus.RamPercentage,
+                    disk_usage = currentStatus.DiskPercentage,
+                    cpu_temp = currentStatus.CpuTemperature,
+                    battery_level = currentStatus.BatteryPercentage
                 } : null;
 
                 var machine = new
@@ -199,6 +206,7 @@ namespace DeskGuardBackend.Controllers
 
                 object? dto = status != null ? new
                 {
+                    // Primary field names (new standard)
                     cpu_percentage = status.CpuPercentage,
                     cpu_temperature = status.CpuTemperature,
                     cpu_clock_speed = status.CpuClockSpeed,
@@ -223,7 +231,13 @@ namespace DeskGuardBackend.Controllers
                     firewall_status = status.FirewallEnabled == true ? "Enabled" : (status.FirewallEnabled == false ? "Disabled" : null),
                     pending_updates = pendingUpdateCount,
                     online_status = status.OnlineStatus,
-                    last_collected_at = status.LastCollectedAt
+                    last_collected_at = status.LastCollectedAt,
+                    // Backward-compatible aliases for frontend
+                    cpu_usage = status.CpuPercentage,
+                    memory_usage = status.RamPercentage,
+                    disk_usage = status.DiskPercentage,
+                    cpu_temp = status.CpuTemperature,
+                    battery_level = status.BatteryPercentage
                 } : null;
 
                 return Ok(ApiResponse<object>.Ok(dto));
@@ -265,7 +279,12 @@ namespace DeskGuardBackend.Controllers
                     disk_percentage = h.DiskPercentage,
                     cpu_temperature = h.CpuTemperature,
                     collected_at = h.CollectedAt,
-                    created_at = h.CreatedAt
+                    created_at = h.CreatedAt,
+                    // Backward-compatible aliases
+                    cpu_usage = h.CpuPercentage,
+                    memory_usage = h.RamPercentage,
+                    disk_usage = h.DiskPercentage,
+                    cpu_temp = h.CpuTemperature
                 })
                 .ToListAsync();
             return Ok(ApiResponse<object>.Ok(history));

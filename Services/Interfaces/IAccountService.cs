@@ -8,10 +8,11 @@ namespace DeskGuardBackend.Services.Interfaces
         Task<AccountDto> CreateAsync(CreateAccountRequest request, long creatorUserId);
         Task<AccountListResponse> GetAllAsync(AccountFilterRequest filter);
         Task<AccountDto> GetByIdAsync(long id);
-        Task<AccountDto> UpdateAsync(long id, UpdateAccountRequest request);
-        Task DeleteAsync(long id);
-        Task DisableAsync(long id);
-        Task EnableAsync(long id);
+        Task<AccountDto> UpdateAsync(long id, UpdateAccountRequest request, long currentUserId);
+        Task ResetPasswordAsync(long id, ResetPasswordRequest request, long currentUserId);
+        Task DeleteAsync(long id, long currentUserId);
+        Task DisableAsync(long id, long currentUserId);
+        Task EnableAsync(long id, long currentUserId);
         Task<string> GenerateEmployeeIdAsync();
     }
 }

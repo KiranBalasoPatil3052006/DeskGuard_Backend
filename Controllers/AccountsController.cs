@@ -94,11 +94,12 @@ namespace DeskGuardBackend.Controllers
         {
             try
             {
+                var currentUserId = GetCurrentUserId();
                 var currentUserRole = GetCurrentUserRole();
                 if (currentUserRole != "Super Admin")
                     return Forbid();
 
-                var result = await _accountService.UpdateAsync(id, request);
+                var result = await _accountService.UpdateAsync(id, request, currentUserId);
                 return Ok(ApiResponse<AccountDto>.Ok(result, "Account updated successfully."));
             }
             catch (AccountException ex)
@@ -112,16 +113,41 @@ namespace DeskGuardBackend.Controllers
             }
         }
 
+        [HttpPost("{id:long}/reset-password")]
+        public async Task<IActionResult> ResetPassword(long id, [FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                var currentUserRole = GetCurrentUserRole();
+                if (currentUserRole != "Super Admin")
+                    return Forbid();
+
+                await _accountService.ResetPasswordAsync(id, request, currentUserId);
+                return Ok(ApiResponse.Ok("Account password reset successfully."));
+            }
+            catch (AccountException ex)
+            {
+                return StatusCode(ex.StatusCode, ApiResponse.Fail(ex.Message, ex.Errors));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to reset password for account {Id}", id);
+                return StatusCode(500, ApiResponse.Fail("An unexpected error occurred."));
+            }
+        }
+
         [HttpDelete("{id:long}")]
         public async Task<IActionResult> Delete(long id)
         {
             try
             {
+                var currentUserId = GetCurrentUserId();
                 var currentUserRole = GetCurrentUserRole();
                 if (currentUserRole != "Super Admin")
                     return Forbid();
 
-                await _accountService.DeleteAsync(id);
+                await _accountService.DeleteAsync(id, currentUserId);
                 return Ok(ApiResponse.Ok("Account deleted successfully."));
             }
             catch (AccountException ex)
@@ -140,11 +166,12 @@ namespace DeskGuardBackend.Controllers
         {
             try
             {
+                var currentUserId = GetCurrentUserId();
                 var currentUserRole = GetCurrentUserRole();
                 if (currentUserRole != "Super Admin")
                     return Forbid();
 
-                await _accountService.DisableAsync(id);
+                await _accountService.DisableAsync(id, currentUserId);
                 return Ok(ApiResponse.Ok("Account disabled successfully."));
             }
             catch (AccountException ex)
@@ -163,11 +190,12 @@ namespace DeskGuardBackend.Controllers
         {
             try
             {
+                var currentUserId = GetCurrentUserId();
                 var currentUserRole = GetCurrentUserRole();
                 if (currentUserRole != "Super Admin")
                     return Forbid();
 
-                await _accountService.EnableAsync(id);
+                await _accountService.EnableAsync(id, currentUserId);
                 return Ok(ApiResponse.Ok("Account enabled successfully."));
             }
             catch (AccountException ex)
@@ -198,7 +226,10 @@ namespace DeskGuardBackend.Controllers
 
         private long GetCurrentUserId()
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value
+                ?? User.FindFirst("id")?.Value
+                ?? User.FindFirst(ClaimTypes.Name)?.Value;
             if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out var userId))
                 throw new UnauthorizedActionException("Unauthorized.", 401);
             return userId;

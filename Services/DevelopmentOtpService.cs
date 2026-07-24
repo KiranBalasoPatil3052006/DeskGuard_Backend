@@ -54,11 +54,18 @@ namespace DeskGuardBackend.Services
             if (userExists) return true;
 
             // Check Customers table
-            var customerExists = await _dbContext.Customers
-                .AsNoTracking()
-                .AnyAsync(c => c.MobileNumber == cleanMobile);
+            try
+            {
+                var customerExists = await _dbContext.Customers
+                    .AsNoTracking()
+                    .AnyAsync(c => c.MobileNumber == cleanMobile);
 
-            if (customerExists) return true;
+                if (customerExists) return true;
+            }
+            catch
+            {
+                // Ignore if customers table is not created yet
+            }
 
             // Check Machines table for assigned employee mobile
             var machineExists = await _dbContext.Machines
@@ -171,8 +178,16 @@ namespace DeskGuardBackend.Services
             }
 
             // 3. Look up Customer record if available
-            var customers = await _dbContext.Customers.ToListAsync();
-            var customer = customers.FirstOrDefault(c => NormalizeMobileNumber(c.MobileNumber) == cleanMobile);
+            Customer? customer = null;
+            try
+            {
+                var customers = await _dbContext.Customers.AsNoTracking().ToListAsync();
+                customer = customers.FirstOrDefault(c => NormalizeMobileNumber(c.MobileNumber) == cleanMobile);
+            }
+            catch (Exception custEx)
+            {
+                _logger.LogWarning(custEx, "Notice querying customers table");
+            }
 
             var email = customer?.Email ?? $"{cleanMobile}@customer.deskguard.com";
 

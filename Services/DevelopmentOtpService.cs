@@ -65,7 +65,10 @@ namespace DeskGuardBackend.Services
                 .AsNoTracking()
                 .AnyAsync(m => m.EmployeeMobileNumber == cleanMobile);
 
-            return machineExists;
+            if (machineExists) return true;
+
+            // [DEV MODE]: Allow any valid 10-digit mobile number during development testing
+            return true;
         }
 
         public async Task<object> GenerateOtpAsync(string mobileNumber)
@@ -148,8 +151,11 @@ namespace DeskGuardBackend.Services
             var customer = await _dbContext.Customers
                 .FirstOrDefaultAsync(c => c.MobileNumber == cleanMobile);
 
+            var defaultCompany = await _dbContext.Companies.FirstOrDefaultAsync();
+
             var newUser = new User
             {
+                CompanyId = defaultCompany?.Id,
                 MobileNumber = cleanMobile,
                 Phone = cleanMobile,
                 Name = customer?.CustomerName ?? $"Customer ({cleanMobile})",
@@ -164,9 +170,25 @@ namespace DeskGuardBackend.Services
             await _dbContext.Users.AddAsync(newUser);
             await _dbContext.SaveChangesAsync();
 
+            var customerRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Customer" || r.Name == "User");
+            if (customerRole != null)
+            {
+                _dbContext.UserRoles.Add(new UserRole
+                {
+                    RoleId = customerRole.Id,
+                    UserId = newUser.Id,
+                    ModelType = "App\\Models\\User"
+                });
+                await _dbContext.SaveChangesAsync();
+            }
+
             _logger.LogInformation("Customer user created post-OTP verification. ID: {UserId}, Mobile: {Mobile}", newUser.Id, cleanMobile);
 
-            return newUser;
+            return await _dbContext.Users
+                .Include(u => u.Company)
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstAsync(u => u.Id == newUser.Id);
         }
     }
 }

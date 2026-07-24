@@ -498,6 +498,17 @@ try
             Log.Information("Updated password and status for Super Admin user: {Email}", email);
         }
 
+        string[] rolesToSeed = { "Super Admin", "Admin", "Customer", "User" };
+        foreach (var roleName in rolesToSeed)
+        {
+            var rExists = await dbContext.Roles.AnyAsync(r => r.Name == roleName);
+            if (!rExists)
+            {
+                await dbContext.Roles.AddAsync(new Role { Name = roleName, GuardName = "web", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
+            }
+        }
+        await dbContext.SaveChangesAsync();
+
         var superAdminRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Super Admin");
         if (superAdminRole != null)
         {

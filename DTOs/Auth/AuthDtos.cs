@@ -75,12 +75,18 @@ public class OtpRequest
     {
         [JsonPropertyName("mobile_number")]
         public string MobileNumber { get; set; } = string.Empty;
+
+        [JsonPropertyName("mobileNumber")]
+        public string MobileNumberAlt { set { if (!string.IsNullOrWhiteSpace(value)) MobileNumber = value; } }
     }
 
     public class OtpVerifyRequest
     {
         [JsonPropertyName("mobile_number")]
         public string MobileNumber { get; set; } = string.Empty;
+
+        [JsonPropertyName("mobileNumber")]
+        public string MobileNumberAlt { set { if (!string.IsNullOrWhiteSpace(value)) MobileNumber = value; } }
 
         [JsonPropertyName("otp")]
         public string Otp { get; set; } = string.Empty;

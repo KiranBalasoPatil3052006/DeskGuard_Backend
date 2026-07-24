@@ -278,8 +278,9 @@ namespace DeskGuardBackend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Customer OTP verification failed for mobile {Mobile}", request?.MobileNumber);
-                return StatusCode(500, ApiResponse.Fail("OTP verification failed."));
+                var detailedError = ex.InnerException?.Message ?? ex.Message;
+                _logger.LogError(ex, "Customer OTP verification failed for mobile {Mobile}. Cause: {Cause}", request?.MobileNumber, detailedError);
+                return StatusCode(500, ApiResponse.Fail($"OTP verification failed: {detailedError}"));
             }
         }
     }

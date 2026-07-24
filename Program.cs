@@ -51,7 +51,7 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     var port = uri.Port > 0 ? uri.Port : 5432;
     var database = uri.AbsolutePath.TrimStart('/');
 
-    connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true";
     Log.Information("Using DATABASE_URL for PostgreSQL: {Host}:{Port}/{Database}", host, port, database);
 }
 else

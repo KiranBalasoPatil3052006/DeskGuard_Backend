@@ -216,8 +216,8 @@ namespace DeskGuardBackend.Controllers
                     return StatusCode(500, ApiResponse.Fail("Health data processing failed."));
                 }
 
-                _logger.LogInformation("AgentHealthController: Health payload processed for machine {MachineId} | customerMobile={Mobile} | cleanMobile={CleanMobile}", machine.Id, customerMobile, cleanMobile);
-                return Ok(ApiResponse.Ok($"Health data processed. Customer mobile: '{cleanMobile}'"));
+                _logger.LogInformation("AgentHealthController: Health payload processed for machine {MachineId} | mobile={CleanMobile}", machine.Id, cleanMobile);
+                return Ok(ApiResponse.Ok("Health data processed successfully."));
             }
             catch (Exception ex)
             {

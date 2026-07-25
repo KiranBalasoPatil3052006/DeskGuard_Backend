@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DeskGuardBackend.Entities
 {
@@ -21,6 +22,7 @@ namespace DeskGuardBackend.Entities
         public string CustomerName { get; set; } = string.Empty;
 
         /// <summary>Primary contact Mobile Number.</summary>
+        [Column("mobile_number")]
         public string MobileNumber { get; set; } = string.Empty;
 
         /// <summary>Primary contact Email Address.</summary>

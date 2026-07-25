@@ -110,13 +110,27 @@ namespace DeskGuardBackend.Controllers
                     };
                     await _dbContext.Customers.AddAsync(customerEntity);
                     await _dbContext.SaveChangesAsync();
-                    _logger.LogInformation("Created Customer record for mobile {Mobile} -> Code {Code}", cleanMobile, customerEntity.CustomerCode);
+
+                    // Force save mobile number via direct SQL to handle any EF Core mapping quirks
+                    await _dbContext.Database.ExecuteSqlRawAsync(
+                        "UPDATE customers SET mobile_number = {0} WHERE id = {1}",
+                        cleanMobile, customerEntity.Id);
+
+                    // Refresh entity to pick up any DB-side changes
+                    await _dbContext.Entry(customerEntity).ReloadAsync();
+
+                    _logger.LogInformation("Created Customer record for mobile {Mobile} -> Code {Code} (forced SQL update applied)", cleanMobile, customerEntity.CustomerCode);
                 }
                 if (!machine.CustomerId.HasValue || machine.CustomerId != customerEntity.Id)
                 {
                     machine.CustomerId = customerEntity.Id;
                     machine.EmployeeMobileNumber = cleanMobile;
                     await _dbContext.SaveChangesAsync();
+
+                    // Force save EmployeeMobileNumber via direct SQL
+                    await _dbContext.Database.ExecuteSqlRawAsync(
+                        "UPDATE machines SET employee_mobile_number = {0}, customer_id = {1} WHERE id = {2}",
+                        cleanMobile, customerEntity.Id, machine.Id);
                 }
 
                 // Auto-register machine token from the Authorization header
@@ -188,8 +202,8 @@ namespace DeskGuardBackend.Controllers
                     return StatusCode(500, ApiResponse.Fail("Health data processing failed."));
                 }
 
-                _logger.LogInformation("AgentHealthController: Health payload processed for machine {MachineId}", machine.Id);
-                return Ok(ApiResponse.Ok("Health data processed successfully."));
+                _logger.LogInformation("AgentHealthController: Health payload processed for machine {MachineId} | customerMobile={Mobile} | cleanMobile={CleanMobile}", machine.Id, customerMobile, cleanMobile);
+                return Ok(ApiResponse.Ok($"Health data processed. Customer mobile: '{cleanMobile}'"));
             }
             catch (Exception ex)
             {

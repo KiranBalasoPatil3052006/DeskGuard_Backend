@@ -153,7 +153,7 @@ namespace DeskGuardBackend.Services
                 MobileNumber = cleanMobile,
                 Phone = cleanMobile,
                 Name = customer?.CustomerName ?? $"Customer ({cleanMobile})",
-                Email = customer?.Email ?? $"{cleanMobile}@customer.deskguard.com",
+                Email = $"{cleanMobile}@customer.deskguard.com", // Always use unique email to avoid conflicts
                 IsVerified = true,
                 IsActive = true,
                 MustChangePassword = false,

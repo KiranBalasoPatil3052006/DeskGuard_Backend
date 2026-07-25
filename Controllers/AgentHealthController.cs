@@ -121,6 +121,20 @@ namespace DeskGuardBackend.Controllers
 
                     _logger.LogInformation("Created Customer record for mobile {Mobile} -> Code {Code} (forced SQL update applied)", cleanMobile, customerEntity.CustomerCode);
                 }
+                else
+                {
+                    // Update existing Customer with latest payload data
+                    var existingName = rawPayload.GetStringProperty("customerName")
+                        ?? rawPayload.GetStringProperty("customer_name");
+                    var existingEmail = rawPayload.GetStringProperty("customerEmail")
+                        ?? rawPayload.GetStringProperty("customer_email")
+                        ?? rawPayload.GetStringProperty("email");
+
+                    if (!string.IsNullOrWhiteSpace(existingName)) customerEntity.CustomerName = existingName;
+                    if (!string.IsNullOrWhiteSpace(existingEmail)) customerEntity.Email = existingEmail;
+                    customerEntity.UpdatedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
+                }
                 if (!machine.CustomerId.HasValue || machine.CustomerId != customerEntity.Id)
                 {
                     machine.CustomerId = customerEntity.Id;

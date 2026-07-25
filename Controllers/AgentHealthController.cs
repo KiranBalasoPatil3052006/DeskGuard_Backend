@@ -48,6 +48,14 @@ namespace DeskGuardBackend.Controllers
                     return UnprocessableEntity(ApiResponse.Fail("Machine identifier is required."));
                 }
 
+                var customerMobile = rawPayload.GetStringProperty("customerMobileNumber")
+                    ?? rawPayload.GetStringProperty("customer_mobile_number")
+                    ?? rawPayload.GetStringProperty("mobile_number");
+                if (string.IsNullOrWhiteSpace(customerMobile))
+                {
+                    return UnprocessableEntity(ApiResponse.Fail("Customer mobile number is required. Ensure CustomerInfo is configured on the agent."));
+                }
+
                 var companyId = await GetOrCreateCompanyIdAsync(rawPayload);
 
                 var systemInfoProp = rawPayload.GetPropertyOrNull("systemInfo");
@@ -72,6 +80,42 @@ namespace DeskGuardBackend.Controllers
                         LastHeartbeatAt = DateTime.UtcNow
                     };
                     await _dbContext.Machines.AddAsync(machine);
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                // Create or find Customer by mobile number from payload
+                var cleanMobile = customerMobile.Trim().Replace(" ", "").Replace("-", "").Replace("+91", "");
+                var customerEntity = await _dbContext.Customers
+                    .FirstOrDefaultAsync(c => c.MobileNumber == cleanMobile);
+                if (customerEntity == null)
+                {
+                    var customerName = rawPayload.GetStringProperty("customerName")
+                        ?? rawPayload.GetStringProperty("customer_name");
+                    var compName = rawPayload.GetStringProperty("companyName")
+                        ?? rawPayload.GetStringProperty("company_name");
+                    var customerEmail = rawPayload.GetStringProperty("customerEmail")
+                        ?? rawPayload.GetStringProperty("customer_email")
+                        ?? rawPayload.GetStringProperty("email");
+
+                    customerEntity = new Customer
+                    {
+                        CustomerCode = $"CUST-{1001 + await _dbContext.Customers.CountAsync()}",
+                        CompanyName = compName ?? "Unknown Company",
+                        CustomerName = customerName ?? "AMC Customer",
+                        MobileNumber = cleanMobile,
+                        Email = customerEmail,
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await _dbContext.Customers.AddAsync(customerEntity);
+                    await _dbContext.SaveChangesAsync();
+                    _logger.LogInformation("Created Customer record for mobile {Mobile} -> Code {Code}", cleanMobile, customerEntity.CustomerCode);
+                }
+                if (!machine.CustomerId.HasValue || machine.CustomerId != customerEntity.Id)
+                {
+                    machine.CustomerId = customerEntity.Id;
+                    machine.EmployeeMobileNumber = cleanMobile;
                     await _dbContext.SaveChangesAsync();
                 }
 
@@ -103,22 +147,46 @@ namespace DeskGuardBackend.Controllers
                 }
 
                 // Log raw payload
-                var rawLog = new RawPayloadLog
+                try
                 {
-                    MachineId = machine.Id,
-                    MachineUid = machineUid,
-                    Payload = JsonSerializer.Serialize(rawPayload),
-                    SourceIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
-                    ReceivedAt = DateTime.UtcNow
-                };
-                await _dbContext.RawPayloadLogs.AddAsync(rawLog);
-                await _dbContext.SaveChangesAsync();
+                    var rawLog = new RawPayloadLog
+                    {
+                        MachineId = machine.Id,
+                        MachineUid = machineUid,
+                        Payload = JsonSerializer.Serialize(rawPayload),
+                        SourceIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        ReceivedAt = DateTime.UtcNow
+                    };
+                    await _dbContext.RawPayloadLogs.AddAsync(rawLog);
+                    await _dbContext.SaveChangesAsync();
+                }
+                catch (Exception rawEx)
+                {
+                    _logger.LogError(rawEx, "AgentHealthController: Failed to log raw payload for machine {MachineId}", machine.Id);
+                }
 
                 // Normalise the payload format to the structure expected by section processors
-                var normalizedPayload = NormalisePayload(rawPayload);
+                Dictionary<string, object?> normalizedPayload;
+                try
+                {
+                    normalizedPayload = NormalisePayload(rawPayload);
+                }
+                catch (Exception normEx)
+                {
+                    _logger.LogError(normEx, "AgentHealthController: Payload normalization failed for machine {MachineId}", machine.Id);
+                    return StatusCode(500, ApiResponse.Fail("Health payload normalization failed."));
+                }
 
-                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(normalizedPayload));
-                await _payloadProcessorService.ProcessAsync(machine, doc.RootElement);
+                try
+                {
+                    using var doc = JsonDocument.Parse(JsonSerializer.Serialize(normalizedPayload));
+                    await _payloadProcessorService.ProcessAsync(machine, doc.RootElement);
+                }
+                catch (Exception procEx)
+                {
+                    _logger.LogError(procEx, "AgentHealthController: Payload processor failed for machine {MachineId}", machine.Id);
+                    return StatusCode(500, ApiResponse.Fail("Health data processing failed."));
+                }
 
                 _logger.LogInformation("AgentHealthController: Health payload processed for machine {MachineId}", machine.Id);
                 return Ok(ApiResponse.Ok("Health data processed successfully."));

@@ -38,12 +38,7 @@ namespace DeskGuardBackend.Migrations
                 type: "text",
                 nullable: true);
 
-            migrationBuilder.AddColumn<string>(
-                name: "customer_id",
-                table: "companies",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: true);
+            migrationBuilder.Sql("ALTER TABLE companies ADD COLUMN IF NOT EXISTS customer_id character varying(100);");
 
             migrationBuilder.AddColumn<string>(
                 name: "alert_type",

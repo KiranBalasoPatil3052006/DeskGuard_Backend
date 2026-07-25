@@ -154,6 +154,12 @@ namespace DeskGuardBackend.Services
             string companyName = customerEntity?.CompanyName ?? userEntity?.Company?.Name ?? "DeskGuard AMC Account";
             string email = customerEntity?.Email ?? userEntity?.Email ?? $"{cleanMobile}@customer.deskguard.com";
 
+            // AMC info from Customer record (temporary 90-day validity)
+            DateTime amcStart = customerEntity?.CreatedAt ?? DateTime.UtcNow;
+            DateTime amcEnd = amcStart.AddDays(90);
+            int remainingDays = (int)Math.Max(0, (amcEnd - DateTime.UtcNow).TotalDays);
+            string amcStatus = remainingDays > 0 ? "Active" : "Expired";
+
             return new
             {
                 customer_info = new
@@ -171,6 +177,13 @@ namespace DeskGuardBackend.Services
                     critical = criticalCount,
                     offline = offlineCount,
                     average_health_score = avgHealthScore
+                },
+                amc_info = new
+                {
+                    status = amcStatus,
+                    start_date = amcStart,
+                    end_date = amcEnd,
+                    remaining_days = remainingDays
                 },
                 recent_alerts = recentAlerts,
                 last_updated_at = DateTime.UtcNow
@@ -326,6 +339,12 @@ namespace DeskGuardBackend.Services
                 });
             }
 
+            // AMC Coverage
+            DateTime amcStart = machine.Customer?.CreatedAt ?? machine.Company?.AmcStartDate ?? machine.CreatedAt;
+            DateTime amcEnd = machine.Company?.AmcEndDate ?? amcStart.AddDays(90);
+            int remainingDays = (int)Math.Max(0, (amcEnd - DateTime.UtcNow).TotalDays);
+            string amcStatus = remainingDays > 0 ? "Active" : "Expired";
+
             double cpuUsage = currentStatus?.CpuPercentage.HasValue == true ? (double)currentStatus.CpuPercentage.Value : 18.5;
             double ramUsage = currentStatus?.RamPercentage.HasValue == true ? (double)currentStatus.RamPercentage.Value : 42.0;
             double diskUsage = currentStatus?.DiskPercentage.HasValue == true ? (double)currentStatus.DiskPercentage.Value : 62.0;
@@ -374,6 +393,13 @@ namespace DeskGuardBackend.Services
                     current_status = sysStatus,
                     is_online = machine.IsOnline,
                     last_sync_time = currentStatus?.LastCollectedAt ?? machine.LastHeartbeatAt ?? machine.UpdatedAt
+                },
+                amc_coverage = new
+                {
+                    status = amcStatus,
+                    start_date = amcStart,
+                    end_date = amcEnd,
+                    remaining_days = remainingDays
                 }
             };
         }
@@ -396,7 +422,7 @@ namespace DeskGuardBackend.Services
             var query = _dbContext.Alerts
                 .AsNoTracking()
                 .Include(a => a.Machine)
-                .Where(a => machineIds.Contains(a.MachineId));
+                .Where(a => machineIds.Contains(a.MachineId) && a.Status != "Resolved");
 
             if (!string.IsNullOrWhiteSpace(search))
             {

@@ -270,10 +270,16 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<DeskGuardDbContext>();
-        
-        Log.Information("Applying PostgreSQL database migrations and schema checks...");
+
+        // 1. Apply all pending EF Core migrations FIRST
+        Log.Information("Applying PostgreSQL EF Core migrations...");
+        dbContext.Database.Migrate();
+        Log.Information("EF Core migrations applied successfully.");
+
+        // 2. Apply any raw SQL schema fixes that migrations may not cover
         try
         {
+            Log.Information("Running supplementary schema checks...");
             dbContext.Database.ExecuteSqlRaw("ALTER TABLE companies ADD COLUMN IF NOT EXISTS customer_id character varying(100);");
             dbContext.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts integer NOT NULL DEFAULT 0;");
             dbContext.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS lockout_end_at timestamp with time zone;");
@@ -395,16 +401,13 @@ try
                     updated_at timestamp with time zone NOT NULL DEFAULT NOW()
                 );
             ");
-            // Note: alerts columns and backfill already handled above (lines 316-325)
         }
         catch (Exception sqlEx)
         {
-            Log.Warning(sqlEx, "Direct SQL schema preparation completed with notice");
+            Log.Warning(sqlEx, "Supplementary schema checks completed with notice");
         }
-        dbContext.Database.Migrate();
 
-
-
+        // 3. Seed default company and Super Admin user
         var email = "kiranbalasopatil33@gmail.com";
         var requestedPassword = "Kiranpatil@33";
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(requestedPassword);

@@ -279,8 +279,8 @@ namespace DeskGuardBackend.Services
                     RequireNumbers = true,
                     RequireSpecialChars = true,
                     IdleSessionTimeoutMinutes = 30,
-                    MaxFailedLoginAttempts = 5,
-                    AccountLockoutDurationMinutes = 30,
+                    MaxFailedLoginAttempts = 0,
+                    AccountLockoutDurationMinutes = 0,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };

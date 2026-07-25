@@ -29,7 +29,7 @@ namespace DeskGuardBackend.Services
             _logger = logger;
         }
 
-        private static string NormalizeMobileNumber(string? mobileNumber)
+        private static string NormalizeMobileNumber(string mobileNumber)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber)) return string.Empty;
             return mobileNumber.Trim().Replace(" ", "").Replace("-", "").Replace("+91", "");
@@ -54,28 +54,18 @@ namespace DeskGuardBackend.Services
             if (userExists) return true;
 
             // Check Customers table
-            try
-            {
-                var customerExists = await _dbContext.Customers
-                    .AsNoTracking()
-                    .AnyAsync(c => c.MobileNumber == cleanMobile);
+            var customerExists = await _dbContext.Customers
+                .AsNoTracking()
+                .AnyAsync(c => c.MobileNumber == cleanMobile);
 
-                if (customerExists) return true;
-            }
-            catch
-            {
-                // Ignore if customers table is not created yet
-            }
+            if (customerExists) return true;
 
             // Check Machines table for assigned employee mobile
             var machineExists = await _dbContext.Machines
                 .AsNoTracking()
                 .AnyAsync(m => m.EmployeeMobileNumber == cleanMobile);
 
-            if (machineExists) return true;
-
-            // [DEV MODE]: Allow any valid 10-digit mobile number during development testing
-            return true;
+            return machineExists;
         }
 
         public async Task<object> GenerateOtpAsync(string mobileNumber)
@@ -120,8 +110,7 @@ namespace DeskGuardBackend.Services
             }
 
             var cleanOtp = otp.Trim();
-            // Development Mode: Accept 111111, 123456, or any 6-digit numeric OTP
-            var isValid = cleanOtp == FixedOtp || cleanOtp == "123456" || (cleanOtp.Length == 6 && cleanOtp.All(char.IsDigit));
+            var isValid = cleanOtp == FixedOtp;
 
             if (isValid)
             {
@@ -139,79 +128,32 @@ namespace DeskGuardBackend.Services
         {
             var cleanMobile = NormalizeMobileNumber(mobileNumber);
 
-            // 1. Search existing users with normalized mobile or phone or email
-            var users = await _dbContext.Users
+            var user = await _dbContext.Users
                 .Include(u => u.Company)
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                .ToListAsync();
-
-            var user = users.FirstOrDefault(u =>
-                NormalizeMobileNumber(u.MobileNumber) == cleanMobile ||
-                NormalizeMobileNumber(u.Phone) == cleanMobile ||
-                (u.Email != null && u.Email.StartsWith(cleanMobile)));
+                .FirstOrDefaultAsync(u => u.MobileNumber == cleanMobile || u.Phone == cleanMobile);
 
             if (user != null)
             {
-                if (!user.IsVerified || !user.IsActive)
+                if (!user.IsVerified)
                 {
                     user.IsVerified = true;
-                    user.IsActive = true;
-                    user.UpdatedAt = DateTime.UtcNow;
                     await _dbContext.SaveChangesAsync();
                 }
                 return user;
             }
 
-            // 2. Ensure Default Company exists
-            var defaultCompany = await _dbContext.Companies.FirstOrDefaultAsync();
-            if (defaultCompany == null)
-            {
-                defaultCompany = new Company
-                {
-                    Name = "DeskGuard Default Company",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                await _dbContext.Companies.AddAsync(defaultCompany);
-                await _dbContext.SaveChangesAsync();
-            }
+            // Look up Customer entity to assign company and customer details
+            var customer = await _dbContext.Customers
+                .FirstOrDefaultAsync(c => c.MobileNumber == cleanMobile);
 
-            // 3. Look up Customer record if available
-            Customer? customer = null;
-            try
-            {
-                var customers = await _dbContext.Customers.AsNoTracking().ToListAsync();
-                customer = customers.FirstOrDefault(c => NormalizeMobileNumber(c.MobileNumber) == cleanMobile);
-            }
-            catch (Exception custEx)
-            {
-                _logger.LogWarning(custEx, "Notice querying customers table");
-            }
-
-            var email = customer?.Email ?? $"{cleanMobile}@customer.deskguard.com";
-
-            // Check if user with this email already exists
-            var existingByEmail = users.FirstOrDefault(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
-            if (existingByEmail != null)
-            {
-                existingByEmail.MobileNumber = cleanMobile;
-                existingByEmail.Phone = cleanMobile;
-                existingByEmail.IsVerified = true;
-                existingByEmail.IsActive = true;
-                existingByEmail.UpdatedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync();
-                return existingByEmail;
-            }
-
-            // 4. Create new User safely
             var newUser = new User
             {
-                CompanyId = defaultCompany.Id,
                 MobileNumber = cleanMobile,
                 Phone = cleanMobile,
-                Name = customer?.CustomerName ?? (customer?.CompanyName != null ? $"{customer.CustomerName} ({customer.CompanyName})" : $"Customer ({cleanMobile})"),
-                Email = email,
+                Name = customer?.CustomerName ?? $"Customer ({cleanMobile})",
+                Email = customer?.Email ?? $"{cleanMobile}@customer.deskguard.com",
                 IsVerified = true,
                 IsActive = true,
                 MustChangePassword = false,
@@ -222,33 +164,9 @@ namespace DeskGuardBackend.Services
             await _dbContext.Users.AddAsync(newUser);
             await _dbContext.SaveChangesAsync();
 
-            // 5. Assign Role safely
-            var role = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Customer")
-                    ?? await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "User")
-                    ?? await _dbContext.Roles.FirstOrDefaultAsync();
-
-            if (role != null)
-            {
-                var userRoleExists = await _dbContext.UserRoles.AnyAsync(ur => ur.UserId == newUser.Id && ur.RoleId == role.Id);
-                if (!userRoleExists)
-                {
-                    _dbContext.UserRoles.Add(new UserRole
-                    {
-                        RoleId = role.Id,
-                        UserId = newUser.Id,
-                        ModelType = "App\\Models\\User"
-                    });
-                    await _dbContext.SaveChangesAsync();
-                }
-            }
-
             _logger.LogInformation("Customer user created post-OTP verification. ID: {UserId}, Mobile: {Mobile}", newUser.Id, cleanMobile);
 
-            return await _dbContext.Users
-                .Include(u => u.Company)
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                .FirstAsync(u => u.Id == newUser.Id);
+            return newUser;
         }
     }
 }

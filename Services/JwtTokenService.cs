@@ -41,7 +41,9 @@ namespace DeskGuardBackend.Services
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
                 new Claim(ClaimTypes.Role, user.UserRoles?.FirstOrDefault()?.Role?.Name ?? "User"),
-                new Claim("CompanyId", user.CompanyId?.ToString() ?? string.Empty)
+                new Claim("CompanyId", user.CompanyId?.ToString() ?? string.Empty),
+                new Claim("MobileNumber", user.MobileNumber ?? string.Empty),
+                new Claim(ClaimTypes.MobilePhone, user.MobileNumber ?? string.Empty)
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor

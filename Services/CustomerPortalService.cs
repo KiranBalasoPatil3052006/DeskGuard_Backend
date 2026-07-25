@@ -127,7 +127,7 @@ namespace DeskGuardBackend.Services
             var recentAlerts = await _dbContext.Alerts
                 .AsNoTracking()
                 .Include(a => a.Machine)
-                .Where(a => machineIds.Contains(a.MachineId))
+                .Where(a => machineIds.Contains(a.MachineId) && a.Status != "Resolved")
                 .OrderByDescending(a => a.CreatedAt)
                 .Take(5)
                 .Select(a => new
@@ -228,6 +228,10 @@ namespace DeskGuardBackend.Services
                 int health = CalculateHealthScore(m);
                 int critCount = criticalAlertsMap.GetValueOrDefault(m.Id, 0);
                 string sysStatus = DetermineSystemStatus(m, health, critCount);
+                DateTime amcStart = m.Customer?.CreatedAt ?? m.Company?.AmcStartDate ?? m.CreatedAt;
+                DateTime amcEnd = m.Company?.AmcEndDate ?? amcStart.AddDays(90);
+                int amcRemaining = (int)Math.Max(0, (amcEnd - DateTime.UtcNow).TotalDays);
+                string amcStatus = amcRemaining > 0 ? "Active" : "Expired";
 
                 return new
                 {
@@ -238,14 +242,22 @@ namespace DeskGuardBackend.Services
                     status = sysStatus,
                     health_score = health,
                     is_online = m.IsOnline,
-                    last_seen_at = m.CurrentStatus?.LastCollectedAt ?? m.LastHeartbeatAt ?? m.UpdatedAt
+                    last_seen_at = m.CurrentStatus?.LastCollectedAt ?? m.LastHeartbeatAt ?? m.UpdatedAt,
+                    amc_status = amcStatus
                 };
             }).ToList();
 
             if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
                 var sf = statusFilter.Trim();
-                systemCards = systemCards.Where(s => s.status.Equals(sf, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (sf.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+                {
+                    systemCards = systemCards.Where(s => s.amc_status.Equals("Expired", StringComparison.OrdinalIgnoreCase)).ToList();
+                }
+                else
+                {
+                    systemCards = systemCards.Where(s => s.status.Equals(sf, StringComparison.OrdinalIgnoreCase)).ToList();
+                }
             }
 
             int totalCount = systemCards.Count;
@@ -484,6 +496,11 @@ namespace DeskGuardBackend.Services
                 ? await _dbContext.Users.AsNoTracking().Include(u => u.Company).FirstOrDefaultAsync(u => u.Id == userId.Value)
                 : await _dbContext.Users.AsNoTracking().Include(u => u.Company).FirstOrDefaultAsync(u => u.MobileNumber == cleanMobile || u.Phone == cleanMobile);
 
+            DateTime amcStart = customer?.CreatedAt ?? user?.CreatedAt ?? DateTime.UtcNow.AddMonths(-6);
+            DateTime amcEnd = amcStart.AddDays(90);
+            int remainingDays = (int)Math.Max(0, (amcEnd - DateTime.UtcNow).TotalDays);
+            string amcStatus = remainingDays > 0 ? "Active" : "Expired";
+
             return new
             {
                 customer_name = customer?.CustomerName ?? user?.Name ?? "AMC Customer",
@@ -491,7 +508,11 @@ namespace DeskGuardBackend.Services
                 mobile_number = cleanMobile,
                 email = customer?.Email ?? user?.Email ?? $"{cleanMobile}@customer.deskguard.com",
                 registered_systems_count = systemsCount,
-                amc_registration_date = customer?.CreatedAt ?? user?.CreatedAt ?? DateTime.UtcNow.AddMonths(-6)
+                amc_registration_date = customer?.CreatedAt ?? user?.CreatedAt ?? DateTime.UtcNow.AddMonths(-6),
+                amc_status = amcStatus,
+                amc_start_date = amcStart,
+                amc_end_date = amcEnd,
+                amc_remaining_days = remainingDays
             };
         }
 
